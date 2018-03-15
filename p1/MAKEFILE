@@ -17,3 +17,4 @@ labs1b.obj: labs1b.asm
   
 labs1c.obj: labs1c.asm
     tasm /zi labs1c.asm ,, labs1c.lst
+

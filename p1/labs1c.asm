@@ -1,7 +1,10 @@
 ;**************************************************************************
-; ASSEMBLY CODE STRUCTURE EXAMPLE. MBS 2018
-;
+; MICROPROCESSOR-BASED SYSTEMS
+; LAB SESSION 1
+; FILE: labs1c.asm
 ; AUTHORS: Emilio Cuesta Fernandez - Alejandro Sanchez Sanz
+; COUPLE NUMBER: 8
+; GROUP: 2351
 ;**************************************************************************
 
 ;**************************************************************************
@@ -21,24 +24,37 @@ ASSUME CS: CODE, ES: EXTRA, SS: PILA
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO PROC
 	; INITIALIZE THE SEGMENT REGISTERS
-	MOV AX, 0511h
+	; We set these instruction in order to write/read on/from the given addresses to check our calculations are OK.
+	MOV AX, 0h
 	MOV DS, AX
 	MOV BX, 0211h
 	MOV DI, 1010h
 	
 	; PROGRAM START
-	TEST1 DW 0CAFEh
-	MOV AX, TEST1
-	MOV DS:[1234H], AX
-	MOV DS:[BX], AX
-	MOV AX, 0FFh
-	MOV DS:[DI], AX
-	;Direccion 1, expected value = 06344h
-	MOV AL, DS:[1234h]  ; Expected AL <= ??FEh, because we had stored FEh on 06344h
-	;Direccion 2, expected value = 05321h
-	MOV AX, DS:[BX]  ; Expected AX <= CAFEh, because we had stored CAFEh on 05321h
-	;Direccion 3, expected value = 06120h
-	MOV DS:[DI], AL  ; Expected [DI] <= FEh , because FFh is overwritten
+	
+	
+	; The idea of the program is easy, we wanted to write on the memory addressed we had previously calculated by hand
+	; and then read from the given ones. If the read bytes are equal to the written ones, both addresses should be the same.
+	
+	
+	MOV AX, 0CAFEh
+	MOV DS:[6344h], AX	;We write CAFEh at 06344h and 06345h.
+	
+	MOV DX, 0FABAh
+	MOV DS:[5321h], DX  ;We write FABAh at 05321h and 05322h.
+	
+	MOV AL, 0BBBBh
+	MOV DS:[6120h], AL  ;We write BBh at 06120h.
+	
+	MOV AX, 0511h
+	MOV DS, AX
+	
+						;Address 1, expected physical address = 06344h
+	MOV AX, DS:[1234h]  ;Expected AX <= CAFEh, because we had stored CAFEh on 06344h
+						;Address 2, expected physical address = 05321h
+	MOV AX, DS:[BX]  	;Expected AX <= FABAh, because we had stored FABAh on 05321h
+						;Address 3, expected physical address = 06120h
+	MOV AL, DS:[DI]		;Expected [DI] <= BBh
 	
 	; PROGRAM END
 	MOV AX, 4C00h
@@ -50,4 +66,24 @@ CODE ENDS
 END INICIO
 
 ;IMPORTANT COMMENT:
-;This program doesnt work in a proper way because it is accessing to a memory segment reserved to BIOS.
+;There is a problem in this exercise. The program is simple, and it should work without problem, but 
+;there is always a moment where DosBox crashes.
+;We believe this is due to an incorrect access to  memory.
+;Using TD to check where does the program exactly crashes we concluded there is no problem with the 
+;first direction (06344h), but if we try to access the second one (05321h) the program stops.
+;Checking the 8086 Memory Map, we can see that the segment from 0 till 005FFh is always reserved to DOS
+;and the segment between 12K to 40K (where these directions belong) can also be taken by DOS.
+;To avoid all of these kind of problems we should only work in the user-destinated area of memory.
+
+
+
+
+
+
+
+
+
+
+
+
+
