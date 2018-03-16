@@ -1,3 +1,13 @@
+##################################################################
+# MICROPROCESSOR-BASED SYSTEMS
+# LAB SESSION 1
+# FILE: labs1c.asm
+# AUTHORS: Emilio Cuesta Fernandez - Alejandro Sanchez Sanz
+# COUPLE NUMBER: 8
+# GROUP: 2351
+##################################################################
+
+
 all: labs1a.exe labs1b.exe labs1c.exe
 
 labs1a.exe: labs1a.obj

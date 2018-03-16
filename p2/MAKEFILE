@@ -1,0 +1,24 @@
+##################################################################
+# MICROPROCESSOR-BASED SYSTEMS
+# LAB SESSION 2
+# FILE: MAKEFILE
+# AUTHORS: Emilio Cuesta Fernandez - Alejandro Sanchez Sanz
+# COUPLE NUMBER: 8
+# GROUP: 2351
+##################################################################
+
+
+all: dec2asc.exe
+
+dec2asc.exe: dec2asc.obj
+    tlink /v dec2asc
+
+dec2asc.obj: dec2asc.asm
+    tasm /zi dec2asc.asm ,, dec2asc.lst
+
+clean: 
+    del *.exe
+    del *.obj
+    del *.lst
+    del *.map
+    

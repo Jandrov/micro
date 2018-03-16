@@ -7,4 +7,4 @@
 ; GROUP: 2351
 ;**************************************************************************
 
-It is really important to read the comment in the botton of the labs1c.asm file.
+It is really important to read the comment in the bottom of the labs1c.asm file.
