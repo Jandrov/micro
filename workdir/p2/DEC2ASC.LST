@@ -1,0 +1,123 @@
+Turbo Assembler	 Version 2.0	    03/23/18 16:56:58	    Page 1
+dec2asc.asm
+
+
+
+      1				     ;**************************************************************************
+      2				     ; MICROPROCESSOR-BASED SYSTEMS
+      3				     ; LAB SESSION 2
+      4				     ; FILE: dec2ASCII.asm
+      5				     ; AUTHORS:	Emilio Cuesta Fernandez	- Alejandro Sanchez Sanz
+      6				     ; COUPLE NUMBER: 8
+      7				     ; GROUP: 2351
+      8				     ;**************************************************************************
+      9
+     10				     ; DATA SEGMENT DEFINITION
+     11	0000			     DATOS SEGMENT
+     12	0000  FFFE			     INPUT DW 65534  ; Variable	to store the number to convert
+     13	0002  06*(??)			     STRING DB 6 dup (?) ; Variable to store the ASCII of the number
+     14	0008			     DATOS ENDS
+     15				     ;**************************************************************************
+     16				     ; STACK SEGMENT DEFINITION
+     17	0000			     PILA SEGMENT STACK	"STACK"
+     18	0000  40*(00)			     DB	40h DUP	(0) ; initialization example, 64 bytes set to 0
+     19	0040			     PILA ENDS
+     20				     ;**************************************************************************
+     21				     ; CODE SEGMENT DEFINITION
+     22	0000			     CODE SEGMENT
+     23				     ASSUME CS:	CODE, DS: DATOS, SS: PILA
+     24				     ; BEGINNING OF THE	MAIN PROCEDURE
+     25	0000			     INICIO PROC
+     26					     ; INITIALIZE THE SEGMENT REGISTERS
+     27	0000  B8 0000s			     MOV AX, DATOS
+     28	0003  8E D8			     MOV DS, AX
+     29
+     30					     ; PROGRAM START
+     31
+     32	0005  8B 1E 0000r		     MOV BX, INPUT
+     33
+     34					     ; We implement the	function to convert a 16-bit number to ASCII code
+     35	0009				     CONVERTER PROC
+     36
+     37	0009  8B C3				     MOV AX, BX	 ; We load the number to convert into AX
+     38	000B  BA 0000				     MOV DX, 0	     ; It is important to initialize DX	to 0
+     39	000E  B9 2710				     MOV CX, 10000
+     40	0011  F7 F9				     IDIV CX
+     41	0013  05 0030				     ADD AX, 30h
+     42	0016  A2 0002r				     MOV STRING, AL ; We write the ASCII code of the first digit
+     43
+     44	0019  8B C2				     MOV AX, DX	 ; We load the remainder into AX to compute the	next division
+     45	001B  BA 0000				     MOV DX, 0	     ; It is important to initialize DX	to 0
+     46	001E  B9 03E8				     MOV CX, 1000
+     47	0021  F7 F9				     IDIV CX
+     48	0023  05 0030				     ADD AX, 30h
+     49	0026  A2 0003r				     MOV STRING[1], AL ; We write the ASCII code of the	second digit
+     50
+     51	0029  8B C2				     MOV AX, DX	 ; We load the remainder into AX to compute the	next division
+     52	002B  BA 0000				     MOV DX, 0	     ; It is important to initialize DX	to 0
+     53	002E  B9 0064				     MOV CX, 100
+     54	0031  F7 F9				     IDIV CX
+     55	0033  05 0030				     ADD AX, 30h
+     56	0036  A2 0004r				     MOV STRING[2], AL ; We write the ASCII code of the	third digit
+     57
+Turbo Assembler	 Version 2.0	    03/23/18 16:56:58	    Page 2
+dec2asc.asm
+
+
+
+     58	0039  8B C2				     MOV AX, DX	 ; We load the remainder into AX to compute the	next division
+     59	003B  BA 0000				     MOV DX, 0	     ; It is important to initialize DX	to 0
+     60	003E  B9 000A				     MOV CX, 10
+     61	0041  F7 F9				     IDIV CX
+     62	0043  05 0030				     ADD AX, 30h
+     63	0046  A2 0005r				     MOV STRING[3], AL ; We write the ASCII code of the	fourth digit
+     64
+     65	0049  83 C2 30				     ADD DX, 30h
+     66	004C  88 16 0006r			     MOV STRING[4], DL;	We write the ASCII code	of the last digit
+     67
+     68	0050  C6 06 0007r 24			     MOV STRING[5], '$'	; We write the sentinel
+     69
+     70	0055  B4 09				     MOV AH, 09h
+     71	0057  BA 0002r				     MOV DX, OFFSET STRING
+     72
+     73	005A				     ENDP CONVERTER
+     74
+     75
+     76					     ; We print	the string
+     77	005A  CD 21			     INT 21h
+     78
+     79					     ; PROGRAM END
+     80	005C  B8 4C00			     MOV AX, 4C00h
+     81	005F  CD 21			     INT 21h
+     82	0061				     INICIO ENDP
+     83				     ; END OF CODE SEGMENT
+     84	0061			     CODE ENDS
+     85				     ; END OF PROGRAM. OBS: INCLUDES THE ENTRY OR THE FIRST PROCEDURE (i.e. “INICIO”)
+     86				     END INICIO
+Turbo Assembler	 Version 2.0	    03/23/18 16:56:58	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "03/23/18"
+??FILENAME			  Text	 "dec2asc "
+??TIME				  Text	 "16:56:58"
+??VERSION			  Number 0200
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODE
+@FILENAME			  Text	 DEC2ASC
+@WORDSIZE			  Text	 2
+CONVERTER			  Near	 CODE:0009
+INICIO				  Near	 CODE:0000
+INPUT				  Word	 DATOS:0000
+STRING				  Byte	 DATOS:0002
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODE				  16  0061 Para	  none
+DATOS				  16  0008 Para	  none
+PILA				  16  0040 Para	  Stack	  STACK
+
