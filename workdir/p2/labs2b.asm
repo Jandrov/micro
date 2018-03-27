@@ -1,7 +1,7 @@
 ;**************************************************************************
 ; MICROPROCESSOR-BASED SYSTEMS
 ; LAB SESSION 2
-; FILE: labs2a.asm
+; FILE: labs2b.asm
 ; AUTHORS: Emilio Cuesta Fernandez - Alejandro Sanchez Sanz
 ; COUPLE NUMBER: 8
 ; GROUP: 2351
@@ -16,12 +16,12 @@ DATOS SEGMENT
 			DB 1,1,0,1
 			DB 1,0,1,1
 			DB 0,1,1,1
+    KEYBOARD DB 4 ?
 	INPUT DB 1,0,1,1  			; 4-bits binary chain
 	ROWS DB 4					; Number of rows
 	COLS DW 7					; Number of columns
     MODUL DB 2
 	TOTAL DW ?
-
 	RESULT DB 7	dup (0)			; Variable where the result is stored
 
 
@@ -57,8 +57,25 @@ INICIO PROC
 	
 	; PROGRAM START
 
+
+
+
+    ; Interruption to read from keyboard
+    MOV AH, 0Ah
+    MOV DX, OFFSET KEYBOARD
+    MOV DX[0]; 2
+	INT 21h
+
+    ; Converting ASCII characters to decimal
+
+    MOV CL, KEYBOARD[1]
+
+    
+
+    
 	; We load the 4-bits binary chain into DX:BX
-	MOV DX, WORD PTR INPUT
+    ; This is the way we have to pass arguments to parity function	
+    MOV DX, WORD PTR INPUT
 	MOV BX, WORD PTR INPUT[2]
 
 	; We implement the function to compute the parity bits in an automatic way

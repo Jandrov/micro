@@ -8,13 +8,20 @@
 ##################################################################
 
 
-all: dec2asc.exe
+all: dec2asc.exe labs2a.exe
 
 dec2asc.exe: dec2asc.obj
     tlink /v dec2asc
 
+labs2a.exe: labs2a.obj
+    tlink /v labs2a
+
 dec2asc.obj: dec2asc.asm
     tasm /zi dec2asc.asm ,, dec2asc.lst
+
+labs2a.obj: labs2a.asm
+    tasm /zi labs2a.asm ,, labs2a.lst
+
 
 clean: 
     del *.exe
