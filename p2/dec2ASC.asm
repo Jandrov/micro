@@ -32,7 +32,7 @@ INICIO PROC
 	
 	; PROGRAM START
 	
-	MOV BX, 60579 		
+	MOV BX, 60579 		; Example number
 
 	; We implement the function to convert a 16-bit number to ASCII code
 	CONVERTER PROC
@@ -44,7 +44,7 @@ INICIO PROC
 		MOV CX, 10000
 		IDIV CX     ; Even though 10000 is a 16 bit operand, we can assume the quotient will always be an 8-bit number.
                     ; Thats because the statement of the exercise specifies this function receives a 16-bit number
-                    ; The biggest 16-bit number is 65537, so the quotient will never be bigger than 6.
+                    ; The biggest 16-bit number is 65535, so the quotient will never be bigger than 6.
                     ; Then, reading from AL is enough, as AH would be 0. This is also the reason why we choose 10000 as the divisor.
                 
         ADD AL, 48  ; In order to print, it is very important to convert correctly to ASCII code. 
