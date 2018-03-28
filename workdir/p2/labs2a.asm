@@ -9,6 +9,8 @@
 
 ; DATA SEGMENT DEFINITION
 DATOS SEGMENT
+
+    ; Variables to do the matrix product
 	GMATRIX DB 1,0,0,0			; Generation matrix (by columns)
 			DB 0,1,0,0
 			DB 0,0,1,0
@@ -16,15 +18,16 @@ DATOS SEGMENT
 			DB 1,1,0,1
 			DB 1,0,1,1
 			DB 0,1,1,1
-	INPUT DB 1,0,1,1  			; 4-bits binary chain
+	INPUT DB 1,1,0,0  			; 4-bits binary chain
 	ROWS DB 4					; Number of rows
 	COLS DW 7					; Number of columns
     MODUL DB 2
 	TOTAL DW ?
 
+    ; Variable to save the result of the product
 	RESULT DB 7	dup (0)			; Variable where the result is stored
 
-
+    ; Variables to print the result in the required format
     TOPRINT1 DB "Input: "
     TOPRINT2 DB 34, ?, 32, ?, 32, ?, 32, ?, 34, 13, 10
     TOPRINT3 DB "Output: "
@@ -33,9 +36,6 @@ DATOS SEGMENT
     TOPRINT6 DB "      | P1 | P2 | D1 | P4 | D2 | D3 | D4", 13, 10, 13, 10
     TOPRINT7 DB "Word  "
     TOPRINT8 DB "| ?  | ?  |    | ?  |    |    |    ", 13, 10, '$'
-  
-
-    SENTINEL DB '$'
 	
 DATOS ENDS
 ;**************************************************************************
@@ -94,8 +94,13 @@ MULT:	MOV CX, 0
 
 	ENDP PARITY
 
-    ;; Printing result with the correct format
-    MOV DI, 1     
+    ; Printing result with the correct format
+    ; As said above, this is a little mess.
+    ; Basically, we are writing the data we need in the memory positions we want inside some "standard" text strings. 
+    
+    ; First print: INPUT + OUTPUT + COMPUTATION + TABLEHEADER + FIRST ROW (WORD)
+
+    ; Filling INPUT DATA  
     MOV AL, INPUT[0]
     ADD AL, 48
     MOV TOPRINT2[1], AL
@@ -108,8 +113,8 @@ MULT:	MOV CX, 0
     MOV AL, INPUT[3]
     ADD AL, 48
     MOV TOPRINT2[7], AL
-
-        MOV DI, 1     
+    
+    ; Filling OUTPUT DATA
     MOV AL, RESULT[4]
     ADD AL, 48
     MOV TOPRINT4[1], AL
@@ -132,8 +137,12 @@ MULT:	MOV CX, 0
     ADD AL, 48
     MOV TOPRINT4[13], AL
 
+    ; Computation and header are static ASCII chains for us so they dont need any special assignment 
 
-    ; First row of the table , WORD
+    ; First row of the table , WORD (This value was assigned by default, for the next rows we will have to change it) 
+    
+    ; Only the needed bytes are written. 
+    ; Despite 13, 23, 28 or 33 seem to by random numbers, they are result of counting bytes in the string to write in the correct position.
 
     MOV AL, RESULT[0]
     ADD AL, 48
@@ -148,7 +157,6 @@ MULT:	MOV CX, 0
     ADD AL, 48
     MOV TOPRINT8[33], AL
 
-
     MOV AX, 0900h
     MOV DX, OFFSET TOPRINT1
 	INT 21h
@@ -156,10 +164,14 @@ MULT:	MOV CX, 0
     
     ; Second row of the table , P1
 
-    MOV WORD PTR TOPRINT7, "P1"
+
+    ; We write the word we want now
+    ; As the desired output is P1, we shall write it backwards to have the characters sorted in memory.
+    MOV WORD PTR TOPRINT7, "1P"
     MOV TOPRINT7[2], 32
     MOV TOPRINT7[3], 32
 
+    ; This lines write blankspaces where we dont want data to appear
     MOV TOPRINT8[7], 32
     MOV TOPRINT8[17], 32
     MOV TOPRINT8[28], 32
@@ -179,9 +191,11 @@ MULT:	MOV CX, 0
 	INT 21h
 
     ; Third row of the table , P2
-    
+
+    ; Now we only need to write the 2 over the 1 in the P1 written before    
     MOV TOPRINT7[1], "2"
 
+    ; This lines write blankspaces where we dont want data to appear
     MOV TOPRINT8[2], 32
     MOV TOPRINT8[23], 32
 
@@ -199,8 +213,10 @@ MULT:	MOV CX, 0
 
     ; Fourth row of the table , P4
 
+    ; Now we only need to write the 4 over the 2 in the P2 written before
     MOV TOPRINT7[1], "4"
 
+    ; This lines write blankspaces where we dont want data to appear
     MOV TOPRINT8[7], 32
     MOV TOPRINT8[13], 32
 

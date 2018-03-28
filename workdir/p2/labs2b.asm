@@ -9,21 +9,35 @@
 
 ; DATA SEGMENT DEFINITION
 DATOS SEGMENT
-	GMATRIX DB 1,0,0,0			; Generation matrix (by columns)
+	
+    ; Variables to do the matrix product
+    GMATRIX DB 1,0,0,0			; Generation matrix (by columns)
 			DB 0,1,0,0
 			DB 0,0,1,0
 			DB 0,0,0,1
 			DB 1,1,0,1
 			DB 1,0,1,1
 			DB 0,1,1,1
-    KEYBOARD DB 4 ?
-	INPUT DB 1,0,1,1  			; 4-bits binary chain
-	ROWS DB 4					; Number of rows
+    ROWS DB 4					; Number of rows
 	COLS DW 7					; Number of columns
     MODUL DB 2
-	TOTAL DW ?
+    TOTAL DW ?
+
+    ; Variable to save the result of the product
 	RESULT DB 7	dup (0)			; Variable where the result is stored
 
+
+    ; Variables to read and save the input from keyboard
+    KEYBOARD DB 5 dup(?) 
+    WRITTEN DW 0 
+	INPUT DB 0,0,0,0  			; 4-bits binary chain
+	
+    ; Variables to print the result in the required format
+    ; This can be a little messy, didnt find a way to make it cleaner.
+    ; To understand it, it may be useful to know:
+    ; 34 is " in ASCII
+    ; 32 is ' ' in ASCII
+    ; 13, 10 is a sequence that basically indicates end of line in ASCII
 
     TOPRINT1 DB "Input: "
     TOPRINT2 DB 34, ?, 32, ?, 32, ?, 32, ?, 34, 13, 10
@@ -33,10 +47,10 @@ DATOS SEGMENT
     TOPRINT6 DB "      | P1 | P2 | D1 | P4 | D2 | D3 | D4", 13, 10, 13, 10
     TOPRINT7 DB "Word  "
     TOPRINT8 DB "| ?  | ?  |    | ?  |    |    |    ", 13, 10, '$'
-  
 
-    SENTINEL DB '$'
-	
+    ; Variable used to print an error message
+    ERRORSTRING DB "The number must be between 0 and 15. Try again.",13,10, '$'
+
 DATOS ENDS
 ;**************************************************************************
 ; STACK SEGMENT DEFINITION
@@ -57,24 +71,103 @@ INICIO PROC
 	
 	; PROGRAM START
 
-
-
-
     ; Interruption to read from keyboard
     MOV AH, 0Ah
     MOV DX, OFFSET KEYBOARD
-    MOV DX[0]; 2
+    MOV KEYBOARD[0],  3 ; It is very important to store here the number of characters we want to read as maximum.
+                        ; In this case its 3 because we want at most 2 digits and the "enter" character.
 	INT 21h
 
-    ; Converting ASCII characters to decimal
+    MOV AL, KEYBOARD[1] ; The second byte of the variable used in the interruption stores know the real number of read bytes.
+                        ; As the procedure differs if there is only a digit or there are two, this is important
+    MOV AH , 0
+    MOV WRITTEN, AX     ; We store it in a 16 bit register to be able to make some comparisons with other 16-bit registers
 
-    MOV CL, KEYBOARD[1]
 
-    
+; FIRST ERROR CONTROL: If no data was read, we print the error message and the program ends.
 
-    
+    CMP WRITTEN, 0
+    JNZ CONT1
+    JMP ERROR
+
+; In this loop, we are reading the input ASCII codes of the characters and also converting them into decimal numbers 
+; before writing them into INPUT variable.
+; Actually, INPUT is used as an auxiliar variable here
+
+CONT1:
+    MOV DI, 0
+
+READ:             
+    MOV AL, KEYBOARD[DI+2]
+    SUB AL, 48
+    MOV INPUT[DI], AL    
+ 
+    INC DI
+    CMP DI, WRITTEN
+    JNZ READ
+
+    ; Now, it is neccesarry to convert the whole number to a decimal base number.
+    ; Remember before now we were working with its digits separately
+
+
+    CMP WRITTEN, 1
+    JNZ TWOCHARACTERS
+
+    ; If there is only a digit, one instruction is enough
+    MOV AL, INPUT[0]
+    JMP JOINT
+
+TWOCHARACTERS:
+    MOV AL, INPUT[0]
+    MOV AH, 0
+    MOV BX, 10
+    MUL BX
+    MOV BL, INPUT[1]
+    ADD AL, BL
+
+JOINT: 
+    ; AL contains the decimal number from now on. 
+    ; Error comparisons
+
+
+
+    ; ERROR CONTROL 2: Checking out if the given number is inside the  establoshed bounds
+
+    CMP AL, 15 ; We first check if it is bigger than 15
+    JG ERRORAUX
+
+    CMP AL, 0   ; Then, if it is lower than 0
+    JL ERRORAUX
+
+    JMP CONT2
+
+    ERRORAUX: ; If any of the conditions above were True, the error message is printed and the program ends
+        JMP ERROR
+
+    CONT2: 
+
+    ; After getting the number in decimal, we want to get its binary digits separated; as in exercise 2
+    ; To do that, we use the division method explained in the given PDF.
+
+    MOV DL, 2
+    MOV DI, 3
+
+    MOV WORD PTR INPUT, 0
+    MOV WORD PTR INPUT[2], 0
+
+ITERATION: 
+    MOV AH, 0
+    DIV DL
+    ; The remainder is stored in AH and its the binary digit we want in each iteration
+    ; The quotient is stored  AL, it is useful to the next operation and to check the break condition
+    MOV INPUT[DI], AH
+    DEC DI
+    CMP AL, 0
+    JNZ ITERATION
+
+
 	; We load the 4-bits binary chain into DX:BX
-    ; This is the way we have to pass arguments to parity function	
+    ; This is the way we have to pass arguments to parity procedure
     MOV DX, WORD PTR INPUT
 	MOV BX, WORD PTR INPUT[2]
 
@@ -111,8 +204,13 @@ MULT:	MOV CX, 0
 
 	ENDP PARITY
 
-    ;; Printing result with the correct format
-    MOV DI, 1     
+    ; Printing result with the correct format
+    ; As said above, this is a little mess.
+    ; Basically, we are writing the data we need in the memory positions we want inside some "standard" text strings. 
+    
+    ; First print: INPUT + OUTPUT + COMPUTATION + TABLEHEADER + FIRST ROW (WORD)
+
+    ; Filling INPUT DATA  
     MOV AL, INPUT[0]
     ADD AL, 48
     MOV TOPRINT2[1], AL
@@ -125,8 +223,8 @@ MULT:	MOV CX, 0
     MOV AL, INPUT[3]
     ADD AL, 48
     MOV TOPRINT2[7], AL
-
-        MOV DI, 1     
+    
+    ; Filling OUTPUT DATA
     MOV AL, RESULT[4]
     ADD AL, 48
     MOV TOPRINT4[1], AL
@@ -149,8 +247,12 @@ MULT:	MOV CX, 0
     ADD AL, 48
     MOV TOPRINT4[13], AL
 
+    ; Computation and header are static ASCII chains for us so they dont need any special assignment 
 
-    ; First row of the table , WORD
+    ; First row of the table , WORD (This value was assigned by default, for the next rows we will have to change it) 
+    
+    ; Only the needed bytes are written. 
+    ; Despite 13, 23, 28 or 33 seem to by random numbers, they are result of counting bytes in the string to write in the correct position.
 
     MOV AL, RESULT[0]
     ADD AL, 48
@@ -165,7 +267,6 @@ MULT:	MOV CX, 0
     ADD AL, 48
     MOV TOPRINT8[33], AL
 
-
     MOV AX, 0900h
     MOV DX, OFFSET TOPRINT1
 	INT 21h
@@ -173,10 +274,14 @@ MULT:	MOV CX, 0
     
     ; Second row of the table , P1
 
-    MOV WORD PTR TOPRINT7, "P1"
+
+    ; We write the word we want now
+    ; As the desired output is P1, we shall write it backwards to have the characters sorted in memory.
+    MOV WORD PTR TOPRINT7, "1P"
     MOV TOPRINT7[2], 32
     MOV TOPRINT7[3], 32
 
+    ; This lines write blankspaces where we dont want data to appear
     MOV TOPRINT8[7], 32
     MOV TOPRINT8[17], 32
     MOV TOPRINT8[28], 32
@@ -196,9 +301,11 @@ MULT:	MOV CX, 0
 	INT 21h
 
     ; Third row of the table , P2
-    
+
+    ; Now we only need to write the 2 over the 1 in the P1 written before    
     MOV TOPRINT7[1], "2"
 
+    ; This lines write blankspaces where we dont want data to appear
     MOV TOPRINT8[2], 32
     MOV TOPRINT8[23], 32
 
@@ -216,8 +323,10 @@ MULT:	MOV CX, 0
 
     ; Fourth row of the table , P4
 
+    ; Now we only need to write the 4 over the 2 in the P2 written before
     MOV TOPRINT7[1], "4"
 
+    ; This lines write blankspaces where we dont want data to appear
     MOV TOPRINT8[7], 32
     MOV TOPRINT8[13], 32
 
@@ -233,9 +342,24 @@ MULT:	MOV CX, 0
     MOV AX, 0900h
     MOV DX, OFFSET TOPRINT7
 	INT 21h
+    
+    ; If this section was reached, the program run successfully.
+
+    JMP JEND
+
+
+; This section prints an error message on screen. If the program run OK, this lines will be skipped
+ERROR: 
+    
+    MOV AX, 0900h
+    MOV DX, OFFSET ERRORSTRING
+	INT 21h
+    JMP JEND    
+
 	
 	; PROGRAM END
-	MOV AX, 4C00h
+JEND:
+    MOV AX, 4C00h
 	INT 21h
 	INICIO ENDP
 ; END OF CODE SEGMENT
