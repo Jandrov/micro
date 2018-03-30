@@ -32,7 +32,7 @@ INICIO PROC
 	
 	; PROGRAM START
 	
-	MOV BX, 60579 		; Example number
+	MOV BX, 579 		; Example number
 
 	; We implement the function to convert a 16-bit number to ASCII code
 	CONVERTER PROC
@@ -49,14 +49,14 @@ INICIO PROC
                 
         ADD AL, 48  ; In order to print, it is very important to convert correctly to ASCII code. 
                     ; Decimal digits start on the 48 ASCII: "0" is 48, "1" is 49, "2" is 50 and so on...
-                    ; Thats the reason why adding 48 solves the problem
+                    ; That is the reason why adding 48 solves the problem
  
 		MOV STRING, AL  ; We write the ASCII code of the first digit in STRING variable
                         ; Standard ASCII codes are 8-bit long 
                    
 
 		MOV AX, DX  ; We load the remainder into AX to compute the next division.
-                    ; Keep in mind that the remainder can only be <= than 5537, 
+                    ; Keep in mind that the remainder can only be <= than 5535, 
                     ; so all the reasoning exposed above can be applied here again.
 		
         MOV DX, 0 	; It is important to initialize DX to 0 
@@ -84,13 +84,13 @@ INICIO PROC
         ADD AL, 48
 		MOV STRING[3], AL ; We write the ASCII code of the fourth digit
 
-        ; In this case, as we jus divided by 10, the remainder will be the last digit
+        ; In this case, as we just divided by 10, the remainder will be the last digit
         ; As the remainder is stored in DL (10 is 8-bit operand), we can just work with that register 
         ADD DL, 48
 		MOV STRING[4], DL; We write the ASCII code of the last digit
 
 		MOV STRING[5], '$' ; We write the sentinel. It is needed to know when a string ends. 
-                           ; Its really important, without the sentinel the interruption 09 would print more than we expect.
+                           ; It is really important, without the sentinel the interruption 09 would print more than we expect.
 
 		MOV AH, 09h
 		MOV DX, OFFSET STRING

@@ -20,8 +20,7 @@ DATOS SEGMENT
 			DB 0,1,1,1
     ROWS DB 4					; Number of rows
 	COLS DW 7					; Number of columns
-    MODUL DB 2
-    TOTAL DW ?
+    BASE DB 2                   ; We work in binary (base=2)
 
     ; Variable to save the result of the product
 	RESULT DB 7	dup (0)			; Variable where the result is stored
@@ -75,10 +74,10 @@ INICIO PROC
     MOV AH, 0Ah
     MOV DX, OFFSET KEYBOARD
     MOV KEYBOARD[0],  3 ; It is very important to store here the number of characters we want to read as maximum.
-                        ; In this case its 3 because we want at most 2 digits and the "enter" character.
+                        ; In this case it is 3 because we want at most 2 digits and the "enter" character.
 	INT 21h
 
-    MOV AL, KEYBOARD[1] ; The second byte of the variable used in the interruption stores know the real number of read bytes.
+    MOV AL, KEYBOARD[1] ; The second byte of the variable used in the interruption stores the real number of read bytes.
                         ; As the procedure differs if there is only a digit or there are two, this is important
     MOV AH , 0
     MOV WRITTEN, AX     ; We store it in a 16 bit register to be able to make some comparisons with other 16-bit registers
@@ -141,15 +140,15 @@ JOINT:
 
     JMP CONT2
 
-    ERRORAUX: ; If any of the conditions above were True, the error message is printed and the program ends
-        JMP ERROR
+ERRORAUX: ; If any of the conditions above were True, the error message is printed and the program ends
+    JMP ERROR
 
-    CONT2: 
+CONT2: 
 
     ; After getting the number in decimal, we want to get its binary digits separated; as in exercise 2
     ; To do that, we use the division method explained in the given PDF.
 
-    MOV DL, 2
+    MOV DL, BASE
     MOV DI, 3
 
     MOV WORD PTR INPUT, 0
@@ -159,7 +158,7 @@ ITERATION:
     MOV AH, 0
     DIV DL
     ; The remainder is stored in AH and its the binary digit we want in each iteration
-    ; The quotient is stored  AL, it is useful to the next operation and to check the break condition
+    ; The quotient is stored in AL, it is useful to the next operation and to check the break condition
     MOV INPUT[DI], AH
     DEC DI
     CMP AL, 0
@@ -172,37 +171,47 @@ ITERATION:
 	MOV BX, WORD PTR INPUT[2]
 
 	; We implement the function to compute the parity bits in an automatic way
-	PARITY PROC
+    PARITY PROC
 
-		MOV DI, 0 ; We initialize the index and loop counter
-		MOV AX, COLS
-		MUL ROWS
-		MOV TOTAL, AX
-MULT:	MOV CX, 0
-		MOV AX, 0
-		MOV AL, GMATRIX[DI][0]
-		MUL DL  
-		ADD CX, AX
-		MOV AL, GMATRIX[DI][1]
-		MUL DH
-		ADD CX, AX
-		MOV AL, GMATRIX[DI][2]
-		MUL BL
-		ADD CX, AX
-		MOV AL, GMATRIX[DI][3]
-		MUL BH
-		ADD AX, CX
-		DIV MODUL
-		MOV RESULT[DI], AH
+        MOV DI, 0 ; We initialize the RESULT index and also the loop counter
+MULT:   MOV CX, 0 ; We initialize the accumulator of the products
+        ; These 3 lines are to compute the column we are multiplying
+        MOV AX, DI
+        MUL ROWS
+        MOV BP, AX
+        
+        MOV SI, 0               ; We initialize the index inside the column
+        MOV AL, GMATRIX[BP][SI] ; We load the matrix element (using BASED-INDEX ADDRESSING)
+        MUL DL                  ; First bit of the vector is stored in DL
+        ADD CX, AX              ; The result of the mult is stored in AX, so we add it to the accumulator 
+        INC SI                  ; We increase the index inside the column
 
-		INC DI
-		CMP DI, COLS
-		JNE MULT
-		
-		MOV AX, SEG RESULT
-		MOV DX, OFFSET RESULT
+        ; We repeat the structure of the previous process
+        MOV AL, GMATRIX[BP][SI]
+        MUL DH                  ; Second bit of the vector is stored in DH
+        ADD CX, AX
+        INC SI
+        MOV AL, GMATRIX[BP][SI]
+        MUL BL                  ; Third bit of the vector is stored in BL
+        ADD CX, AX
+        INC SI
+        MOV AL, GMATRIX[BP][SI]
+        MUL BH                  ; Fourth bit of the vector is stored in BH
 
-	ENDP PARITY
+        ; We store the last accumulation into AX in order to calculate the modul base 2 (we want binary bits)
+        ADD AX, CX
+        DIV BASE
+        MOV RESULT[DI], AH      ; We store the result into RESULT variable
+
+        INC DI                  ; We increase the loop counter
+        CMP DI, COLS            ; We have to do as many iterations as the number of columns
+        JNE MULT
+        
+        ; We return the memory address of the first position of the result
+        MOV AX, SEG RESULT
+        MOV DX, OFFSET RESULT
+
+    ENDP PARITY
 
     ; Printing result with the correct format
     ; As said above, this is a little mess.
@@ -348,7 +357,7 @@ MULT:	MOV CX, 0
     JMP JEND
 
 
-; This section prints an error message on screen. If the program run OK, this lines will be skipped
+; This section prints an error message on screen. If the program runs OK, this lines will be skipped
 ERROR: 
     
     MOV AX, 0900h

@@ -18,11 +18,10 @@ DATOS SEGMENT
 			DB 1,1,0,1
 			DB 1,0,1,1
 			DB 0,1,1,1
-	INPUT DB 1,1,0,0  			; 4-bits binary chain
+	INPUT DB 1,0,1,1  			; 4-bits binary chain
 	ROWS DB 4					; Number of rows
 	COLS DW 7					; Number of columns
-    MODUL DB 2
-	TOTAL DW ?
+    BASE DB 2					; We work in binary (base=2)
 
     ; Variable to save the result of the product
 	RESULT DB 7	dup (0)			; Variable where the result is stored
@@ -64,33 +63,41 @@ INICIO PROC
 	; We implement the function to compute the parity bits in an automatic way
 	PARITY PROC
 
-		MOV DI, 0 ; We initialize the index and loop counter
-		MOV AX, COLS
-		MUL ROWS
-		MOV TOTAL, AX
-MULT:	MOV CX, 0
+		MOV DI, 0 ; We initialize the RESULT index and also the loop counter
+MULT:	MOV CX, 0 ; We initialize the accumulator of the products
+		; These 3 lines are to compute the column we are multiplying
 		MOV AX, DI
 		MUL ROWS
-		MOV SI, AX
-		MOV AL, GMATRIX[SI][0]
-		MUL DL  
-		ADD CX, AX
-		MOV AL, GMATRIX[SI][1]
-		MUL DH
-		ADD CX, AX
-		MOV AL, GMATRIX[SI][2]
-		MUL BL
-		ADD CX, AX
-		MOV AL, GMATRIX[SI][3]
-		MUL BH
-		ADD AX, CX
-		DIV MODUL
-		MOV RESULT[DI], AH
+		MOV BP, AX
+		
+		MOV SI, 0  				; We initialize the index inside the column
+		MOV AL, GMATRIX[BP][SI] ; We load the matrix element (using BASED-INDEX ADDRESSING)
+		MUL DL  				; First bit of the vector is stored in DL
+		ADD CX, AX 				; The result of the mult is stored in AX, so we add it to the accumulator 
+		INC SI  				; We increase the index inside the column
 
-		INC DI
-		CMP DI, COLS
+		; We repeat the structure of the previous process
+		MOV AL, GMATRIX[BP][SI]
+		MUL DH  				; Second bit of the vector is stored in DH
+		ADD CX, AX
+		INC SI
+		MOV AL, GMATRIX[BP][SI]
+		MUL BL  				; Third bit of the vector is stored in BL
+		ADD CX, AX
+		INC SI
+		MOV AL, GMATRIX[BP][SI]
+		MUL BH  				; Fourth bit of the vector is stored in BH
+
+		; We store the last accumulation into AX in order to calculate the modul base 2 (we want binary bits)
+		ADD AX, CX
+		DIV BASE
+		MOV RESULT[DI], AH 		; We store the result into RESULT variable
+
+		INC DI 					; We increase the loop counter
+		CMP DI, COLS 			; We have to do as many iterations as the number of columns
 		JNE MULT
 		
+		; We return the memory address of the first position of the result
 		MOV AX, SEG RESULT
 		MOV DX, OFFSET RESULT
 
