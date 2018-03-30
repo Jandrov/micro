@@ -213,6 +213,13 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
 
     ENDP PARITY
 
+    ; Despite it is not necessary because we could access directly to RESULT variable, we will try to do it
+    ; using the function return ( SEGMENTE:OFFSET in DX:AX)
+    ; This assignment are done to know were the return of the function  (RESULT) is
+
+    MOV BX, DX
+    MOV ES, AX
+ 
     ; Printing result with the correct format
     ; As said above, this is a little mess.
     ; Basically, we are writing the data we need in the memory positions we want inside some "standard" text strings. 
@@ -234,25 +241,25 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
     MOV TOPRINT2[7], AL
     
     ; Filling OUTPUT DATA
-    MOV AL, RESULT[4]
+    MOV AL, ES:[BX+4]  ; Here we could access RESULT directly, but we prefer 
     ADD AL, 48
     MOV TOPRINT4[1], AL
-    MOV AL, RESULT[5]
+    MOV AL, ES:[BX+5]
     ADD AL, 48
     MOV TOPRINT4[3], AL
-    MOV AL, RESULT[0]
+    MOV AL, ES:[BX]
     ADD AL, 48
     MOV TOPRINT4[5], AL
-    MOV AL, RESULT[6]
+    MOV AL, ES:[BX+6]
     ADD AL, 48
     MOV TOPRINT4[7], AL
-    MOV AL, RESULT[1]
+    MOV AL, ES:[BX+1]
     ADD AL, 48
     MOV TOPRINT4[9], AL
-    MOV AL, RESULT[2]
+    MOV AL, ES:[BX+2]
     ADD AL, 48
     MOV TOPRINT4[11], AL
-    MOV AL, RESULT[3]
+    MOV AL, ES:[BX+3]
     ADD AL, 48
     MOV TOPRINT4[13], AL
 
@@ -263,16 +270,16 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
     ; Only the needed bytes are written. 
     ; Despite 13, 23, 28 or 33 seem to by random numbers, they are result of counting bytes in the string to write in the correct position.
 
-    MOV AL, RESULT[0]
+    MOV AL, ES:[BX]
     ADD AL, 48
     MOV TOPRINT8[13], AL
-    MOV AL, RESULT[1]
+    MOV AL, ES:[BX+1]
     ADD AL, 48
     MOV TOPRINT8[23], AL
-    MOV AL, RESULT[2]
+    MOV AL, ES:[BX+2]
     ADD AL, 48
     MOV TOPRINT8[28], AL
-    MOV AL, RESULT[3]
+    MOV AL, ES:[BX+3]
     ADD AL, 48
     MOV TOPRINT8[33], AL
 
@@ -282,7 +289,6 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
 
     
     ; Second row of the table , P1
-
 
     ; We write the word we want now
     ; As the desired output is P1, we shall write it backwards to have the characters sorted in memory.
@@ -295,13 +301,13 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
     MOV TOPRINT8[17], 32
     MOV TOPRINT8[28], 32
 
-    MOV AL, RESULT[4]
+    MOV AL, ES:[BX+4]
     ADD AL, 48
     MOV TOPRINT8[2], AL
-    MOV AL, RESULT[0]
+    MOV AL, ES:[BX]
     ADD AL, 48
     MOV TOPRINT8[13], AL
-    MOV AL, RESULT[1]
+    MOV AL, ES:[BX+1]
     ADD AL, 48
     MOV TOPRINT8[23], AL
 
@@ -318,10 +324,10 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
     MOV TOPRINT8[2], 32
     MOV TOPRINT8[23], 32
 
-    MOV AL, RESULT[5]
+    MOV AL, ES:[BX+5]
     ADD AL, 48
     MOV TOPRINT8[7], AL
-    MOV AL, RESULT[2]
+    MOV AL, ES:[BX+2]
     ADD AL, 48
     MOV TOPRINT8[28], AL
 
@@ -340,10 +346,10 @@ MULT:   MOV CX, 0 ; We initialize the accumulator of the products
     MOV TOPRINT8[13], 32
 
     
-    MOV AL, RESULT[6]
+    MOV AL, ES:[BX+6]
     ADD AL, 48
     MOV TOPRINT8[17], AL
-    MOV AL, RESULT[1]
+    MOV AL, ES:[BX+1]
     ADD AL, 48
     MOV TOPRINT8[23], AL
 
