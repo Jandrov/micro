@@ -92,14 +92,16 @@ INICIO PROC
 		MOV STRING[5], '$' ; We write the sentinel. It is needed to know when a string ends. 
                            ; It is really important, without the sentinel the interruption 09 would print more than we expect.
 
-		MOV AH, 09h
-		MOV DX, OFFSET STRING
+		MOV AX, OFFSET STRING
+		MOV DX, SEG STRING
 
 	ENDP CONVERTER
 
 
 	; We print the string
-	INT 21h
+    MOV DX, AX
+    MOV AX, 0900h
+    INT 21h
 	
 	; PROGRAM END
 	MOV AX, 4C00h
