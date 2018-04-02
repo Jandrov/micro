@@ -18,6 +18,9 @@ DATOS SEGMENT
 			DB 1,1,0,1
 			DB 1,0,1,1
 			DB 0,1,1,1
+    ; We store the matrix by columns because it is more efficient when we want to access memory
+    ; to do the product. We learnt that last semester in Computer Architecture.
+    
 	INPUT DB 1,0,1,1  			; 4-bits binary chain
 	ROWS DB 4					; Number of rows
 	COLS DW 7					; Number of columns
@@ -99,17 +102,17 @@ MULT:	MOV CX, 0 ; We initialize the accumulator of the products
 		JNE MULT
 		
 		; We return the memory address of the first position of the result
-		MOV AX, SEG RESULT
-		MOV DX, OFFSET RESULT
+		MOV AX, OFFSET RESULT
+		MOV DX, SEG RESULT
 
 	ENDP PARITY
 
     ; Despite it is not necessary because we could access directly to RESULT variable, we will try to do it
-    ; using the function return ( SEGMENTE:OFFSET in DX:AX)
-    ; This assignment are done to know were the return of the function  (RESULT) is
+    ; using the function return (SEGMENT:OFFSET in DX:AX)
+    ; These assignments are done to know where the return of the function (RESULT) is
 
-    MOV BX, DX
-    MOV ES, AX
+    MOV BX, AX
+    MOV ES, DX
  
     ; Printing result with the correct format
     ; As said above, this is a little mess.
