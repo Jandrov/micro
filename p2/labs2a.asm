@@ -64,48 +64,8 @@ INICIO PROC
 	MOV DX, WORD PTR INPUT
 	MOV BX, WORD PTR INPUT[2]
 
-	; We implement the function to compute the parity bits in an automatic way
-	PARITY PROC
-
-		MOV DI, 0 ; We initialize the RESULT index and also the loop counter
-MULT:	MOV CX, 0 ; We initialize the accumulator of the products
-		; These 3 lines are to compute the column we are multiplying
-		MOV AX, DI
-		MUL ROWS
-		MOV BP, AX
-		
-		MOV SI, 0  				; We initialize the index inside the column
-		MOV AL, GMATRIX[BP][SI] ; We load the matrix element (using BASED-INDEX ADDRESSING)
-		MUL DL  				; First bit of the vector is stored in DL
-		ADD CX, AX 				; The result of the mult is stored in AX, so we add it to the accumulator 
-		INC SI  				; We increase the index inside the column
-
-		; We repeat the structure of the previous process
-		MOV AL, GMATRIX[BP][SI]
-		MUL DH  				; Second bit of the vector is stored in DH
-		ADD CX, AX
-		INC SI
-		MOV AL, GMATRIX[BP][SI]
-		MUL BL  				; Third bit of the vector is stored in BL
-		ADD CX, AX
-		INC SI
-		MOV AL, GMATRIX[BP][SI]
-		MUL BH  				; Fourth bit of the vector is stored in BH
-
-		; We store the last accumulation into AX in order to calculate the modul base 2 (we want binary bits)
-		ADD AX, CX
-		DIV BASE
-		MOV RESULT[DI], AH 		; We store the result into RESULT variable
-
-		INC DI 					; We increase the loop counter
-		CMP DI, COLS 			; We have to do as many iterations as the number of columns
-		JNE MULT
-		
-		; We return the memory address of the first position of the result
-		MOV AX, OFFSET RESULT
-		MOV DX, SEG RESULT
-
-	ENDP PARITY
+    ; We call the implemented function
+	CALL PARITY
 
     ; Despite it is not necessary because we could access directly to RESULT variable, we will try to do it
     ; using the function return (SEGMENT:OFFSET in DX:AX)
@@ -256,7 +216,53 @@ MULT:	MOV CX, 0 ; We initialize the accumulator of the products
 	; PROGRAM END
 	MOV AX, 4C00h
 	INT 21h
-	INICIO ENDP
+INICIO ENDP
+
+; We implement the function to compute the parity bits in an automatic way
+PARITY PROC
+    MOV DI, 0 ; We initialize the RESULT index and also the loop counter
+
+MULT:   
+    MOV CX, 0 ; We initialize the accumulator of the products
+    ; These 3 lines are to compute the column we are multiplying
+    MOV AX, DI
+    MUL ROWS
+    MOV BP, AX
+    
+    MOV SI, 0               ; We initialize the index inside the column
+    MOV AL, GMATRIX[BP][SI] ; We load the matrix element (using BASED-INDEX ADDRESSING)
+    MUL DL                  ; First bit of the vector is stored in DL
+    ADD CX, AX              ; The result of the mult is stored in AX, so we add it to the accumulator 
+    INC SI                  ; We increase the index inside the column
+
+    ; We repeat the structure of the previous process
+    MOV AL, GMATRIX[BP][SI]
+    MUL DH                  ; Second bit of the vector is stored in DH
+    ADD CX, AX
+    INC SI
+    MOV AL, GMATRIX[BP][SI]
+    MUL BL                  ; Third bit of the vector is stored in BL
+    ADD CX, AX
+    INC SI
+    MOV AL, GMATRIX[BP][SI]
+    MUL BH                  ; Fourth bit of the vector is stored in BH
+
+    ; We store the last accumulation into AX in order to calculate the modul base 2 (we want binary bits)
+    ADD AX, CX
+    DIV BASE
+    MOV RESULT[DI], AH      ; We store the result into RESULT variable
+
+    INC DI                  ; We increase the loop counter
+    CMP DI, COLS            ; We have to do as many iterations as the number of columns
+    JNE MULT
+    
+    ; We return the memory address of the first position of the result
+    MOV AX, OFFSET RESULT
+    MOV DX, SEG RESULT
+
+    RET
+PARITY ENDP
+
 ; END OF CODE SEGMENT
 CODE ENDS
 ; END OF PROGRAM. OBS: INCLUDES THE ENTRY FOR THE FIRST PROCEDURE (i.e. “INICIO”)
