@@ -10,7 +10,7 @@
 
 ; CODE SEGMENT DEFINITION
 _TEXT SEGMENT BYTE PUBLIC 'CODE'
-ASSUME CS: CODE
+ASSUME CS: _TEXT
 
 PUBLIC _computeMatches
 _computeMatches PROC FAR 
@@ -22,7 +22,7 @@ _computeMatches ENDP
 PUBLIC _computeSemiMatches
 _computeSemiMatches PROC FAR 
 
-#code
+
     ret
 _computeSemiMatches ENDP
 
