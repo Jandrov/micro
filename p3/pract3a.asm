@@ -76,6 +76,7 @@ _fillUpAttempt PROC FAR
     ; We'll use  CX to get the attempt number
     ; DX:AX will be used to return the digit
     ; The argument of this function is a number from 0 to 9999 in int format. Therefore, it takes 2 bytes long (+1 positions)
+    ; The return will be done by changing the second argument ( 4 char => 4 byte)
     ; The return direction gap takes +2 positions (2 bytes from segment and another 2 from offset)
 
     ; Attempt is stored in CX
@@ -84,14 +85,22 @@ _fillUpAttempt PROC FAR
     ;Now, we have to divide it to get its digits. Then, we will get their ASCII code (return is char* type).
 
     MOV AX, CX   ; We load the number to convert into AX  
-	MOV DX, 0 	 ; It is important to initialize DX to 0 
-	IDIV 10 ; Even though DIVISOR is a 16 bit operand, we can assume the quotient will always be an 8-bit number.
-                 ; Thats because the statement of the exercise specifies this function receives a 16-bit number
-                 ; The biggest 16-bit number is 65535, so the quotient will never be bigger than 6.
-                 ; Then, reading from AL is enough, as AH would be 0. This is also the reason why we choose 10000 as the
-                 ; first value of DIVISOR.    
-           
-    
+	MOV DX, 0 	 ; It is important to initialize DX to 0
+    MOV CL, 1000 ; Divide by a 16 bit operand
+	IDIV CL      ;
+    MOV   ,AX   ; We store in memory 
+            
+
+    MOV AX, DX   ; We store in AX the remainder
+	MOV DX, 0 	 ; It is important to initialize DX to 0
+    MOV CL, 100 
+	IDIV CL          
+
+    MOV AX, CX   ; We load the number to convert into AX  
+	MOV DX, 0 	 ; It is important to initialize DX to 0
+    MOV CL, 10 
+	IDIV CL          
+       
 
 ENDING: 
     
