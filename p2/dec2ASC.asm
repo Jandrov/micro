@@ -75,9 +75,9 @@ FIRST_ZEROS:
 	JNE FOUND
 
 COUNTER:
-	MOV BX, DX   	; We have to store the remainder, which is in DX
-	MOV DX, 0 		; It is important to initialize DX to 0
-	; The next three lines mean: DIVISOR = DIVISOR/STEP
+	MOV BX, DX   	; We have to store the remainder, which is in DX	
+	; The next four lines mean: DIVISOR = DIVISOR/STEP
+    MOV DX, 0 		; It is important to initialize DX to 0
 	MOV AX, DIVISOR 
 	IDIV STEP
 	MOV DIVISOR, AX
