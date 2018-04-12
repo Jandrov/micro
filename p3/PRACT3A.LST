@@ -1,0 +1,265 @@
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:41	    Page 1
+pract3a.ASM
+
+
+
+      1				     ;**************************************************************************
+      2				     ; MICROPROCESSOR-BASED SYSTEMS
+      3				     ; LAB SESSION 2
+      4				     ; FILE: pract3a.asm
+      5				     ; AUTHORS:	Emilio Cuesta Fernandez	- Alejandro Sanchez Sanz
+      6				     ; COUPLE NUMBER: 8
+      7				     ; GROUP: 2351
+      8				     ;**************************************************************************
+      9
+     10
+     11				     ; CODE SEGMENT DEFINITION
+     12	0000			     _TEXT SEGMENT BYTE	PUBLIC 'CODE'
+     13				     ASSUME CS:	_TEXT
+     14
+     15				     PUBLIC _checkSecretNumber
+     16	0000			     _checkSecretNumber	PROC FAR
+     17
+     18	0000  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
+     19				     after these function.
+     20							 ; Without that	value, the main	program	would lose the reference.
+     21	0001  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
+     22				     the stack)
+     23							 ; We do that to access	the arguments of the function in an easier way:
+     24							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
+     25				     an	integer	which
+     26							 ;     correct values depends on the number and	the size of the	arguments.
+     27							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
+     28				     they aren't needed	in this	function
+     29
+     30
+     31					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
+     32				     restore them at the end of	the procedure.
+     33					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
+     34
+     35	0003  52 53 06			 PUSH DX BX ES	; It is	necessary to push de ES	register because of the	following LES	    +
+     36				     instruction, that modifies	it.
+     37							; We don't push	AX because the program expect the return value tu be stored +
+     38				     there
+     39
+     40					 ; The argument	of this	function is a reference	to a pointer (number). Thats 2 bytes for the+
+     41				     segment and 2 bytes for the offset. 4 bytes in total
+     42					 ; Using LEA/LES is really useful to read this kind of parameters.
+     43					 ; The return direction	gaps takes 4 bytes (2 bytes from segment and another 2 from offset).
+     44					 ; The BP gap takes another 2 bytes
+     45
+     46					 ; The current stack state is similar to this:	 SEG number	   BP+8
+     47					 ;						 OFFSET	number	   BP+6
+     48					 ;						 SEG return@	   BP+4
+     49					 ;						 OFFSET	return@	   BP+2
+     50					 ;						 BP		   BP
+     51					 ;						 ...
+     52
+     53
+     54					 ; As we see in	the schema, to get the argument	direction we shall access BP + 6
+     55	0006  C4 5E 06			 LES BX, [BP + 6]
+     56
+     57					 ; We store in AX the first two	ASCII characters and in	DX the next ones.
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:41	    Page 2
+pract3a.ASM
+
+
+
+     58	0009  26: 8B 07			 MOV AX, ES:[BX]     ; That is,	AH = Argument[1], AL= Argument[0]
+     59	000C  26: 8B 57	02		 MOV DX, ES:[BX+2]   ; That is,	DH = Argument[3], DL= Argument[1]
+     60
+     61					 ; We compare all the possible combination bewteen digits
+     62					 ; It doesnt mind if we	compare	ASCII codes or the numbers directly
+     63					 ; It is easier	to do it in ASCII, to avoid the	conversion code.
+     64
+     65	0010  3A C4			 CMP AL, AH  ; Argument[0] vs Argument[1]
+     66	0012  74 1A			 JE REPET
+     67	0014  3A C2			 CMP AL, DL  ; Argument[0] vs Argument[2]
+     68	0016  74 16			 JE REPET
+     69	0018  3A C6			 CMP AL, DH  ; Argument[0] vs Argument[3]
+     70	001A  74 12			 JE REPET
+     71	001C  3A E2			 CMP AH, DL  ; Argument[1] vs Argument[2]
+     72	001E  74 0E			 JE REPET
+     73	0020  3A E6			 CMP AH, DH  ; Argument[1] vs Argument[3]
+     74	0022  74 0A			 JE REPET
+     75	0024  3A D6			 CMP DL, DH  ; Argument[2] vs Argument[3]
+     76	0026  74 06			 JE REPET
+     77
+     78					 ; If any of this comparations are truth, there	are repeated digits.
+     79					 ; In this case, we do AX=1 and	return (see REPE tag)
+     80					 ; If not, the number is OK to play the	game: we do AX=0 and return.
+     81
+     82	0028  B8 0000			 MOV AX, 00h
+     83	002B  EB 04 90			 JMP ENDING
+     84
+     85	002E			     REPET:
+     86
+     87	002E  B8 0001			 MOV AX, 01h
+     88
+     89
+     90	0031			     ENDING:
+     91
+     92					 ; RESTORE OF VALUES: As we said before, restoring these values	is really important.
+     93					 ; We Pop from the stack in reverse order to do	the correct assignments
+     94					 ; After this instructions, these registers' values should be the same as just before the   +
+     95				     CALL instruction
+     96	0031  07 5B 5A			 POP ES	BX DX
+     97
+     98					 ; We also pop BP, that	was stored the first one.
+     99	0034  5D			 POP BP
+    100
+    101	0035  CB			 ret
+    102
+    103	0036			     _checkSecretNumber	ENDP
+    104
+    105
+    106				     PUBLIC _fillUpAttempt
+    107	0036			     _fillUpAttempt PROC FAR
+    108
+    109	0036  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
+    110				     after these function.
+    111							 ; Without that	value, the main	program	would lose the reference.
+    112	0037  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
+    113				     the stack)
+    114							 ; We do that to access	the arguments of the function in an easier way:
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:41	    Page 3
+pract3a.ASM
+
+
+
+    115							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
+    116				     an	integer	which
+    117							 ;     correct values depends on the number and	the size of the	arguments.
+    118							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
+    119				     they aren't needed	in this	function
+    120
+    121
+    122					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
+    123				     restore them at the end of	the procedure.
+    124					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
+    125
+    126	0039  50 53 51 52 06		 PUSH AX BX CX DX ES ; It is necessary to push de ES register because of the LES	    +
+    127				     instruction, that modifies	it.
+    128							     ; Now we do store AX, the function	is void	and the	main doesnt expect  +
+    129				     to	get a return value on AX.
+    130
+    131					 ; We'll use  CX to get	the attempt number,
+    132					 ; and DX and AX to operate and	get the	digits separated.
+    133					 ; The argument	of this	function is a number from 0 to 9999 in int format. Therefore, it    +
+    134				     takes 2 bytes long	(+1 stack position)
+    135					 ; The return will be done by changing the second argument ( 4 char => 4 bytes)
+    136
+    137
+    138
+    139					 ; The argument	of this	function are:
+    140					 ;		    * attempt =	An unsigned int. 2 bytes
+    141					 ;		    * attemptDigits = A	reference to a pointer.	Thats 2	bytes for the	    +
+    142				     segment and 2 bytes for the offset. 4 bytes in total.
+    143					 ;
+    144					 ; The return direction	gaps takes 4 bytes (2 bytes from segment and another 2 from offset).
+    145					 ; The BP gap takes another 2 bytes
+    146
+    147					 ; The current stack state is similar to this:	 SEG attemptDigits	BP+10
+    148					 ;						 OFFSET	attemptDigits	BP+8
+    149					 ;						 attempt		BP+6
+    150					 ;						 SEG return@		BP+4
+    151					 ;						 OFFSET	return@		BP+2
+    152					 ;						 BP			BP
+    153					 ;						 ...
+    154
+    155
+    156
+    157
+    158					 ; We'll use  CX to get	the attempt number,
+    159					 ; and DX and AX to operate and	get the	digits separated.
+    160					 ; The argument	of this	function is a number from 0 to 9999 in int format. Therefore, it    +
+    161				     takes 2 bytes long	(+1 stack position)
+    162					 ; The return will be done by changing the memory content the second argument points to	( 4 +
+    163				     char => 4 bytes)
+    164					 ; As the attemptDigits	is a char*, we will need to change to ASCII first
+    165					 ; The return direction	gap takes +2 positions (2 bytes	from segment and another 2 from	    +
+    166				     offset)
+    167
+    168					 ; Attempt is stored in	CX
+    169	003E  8B 4E 06			 MOV CX, [ BP +	6 ]
+    170
+    171					 ; Getting the direction to access to attemptDigits and	store the digits
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:41	    Page 4
+pract3a.ASM
+
+
+
+    172
+    173	0041  C4 5E 08			 LES BX, [BP + 8]
+    174
+    175					 ;Now, we have to divide it to get the real digits. Then, we will get their ASCII code	    +
+    176				     (return is	char* type).
+    177
+    178	0044  8B C1			 MOV AX, CX	      ;	We load	the number to convert into AX
+    179	0046  BA 0000			     MOV DX, 0		      ;	It is important	to initialize DX to 0s
+    180	0049  B9 03E8			 MOV CX, 1000	      ;	Divide by a 16 bit operand
+    181	004C  F7 F9			     IDIV CX		  ; Quotient is	stored in AX, Remainder	in DX
+    182	004E  04 30			 ADD AL, 48	      ;	Conversion to ASCII
+    183	0050  26: 88 07			 MOV ES:[BX] , AL     ;	Actually, we know the whole quotient will be stored in AL as the    +
+    184				     number is as maximum 9999
+    185
+    186
+    187	0053  8B C2			 MOV AX, DX	      ;	We store in AX the previous remainder
+    188	0055  BA 0000			     MOV DX, 0		      ;	It is important	to initialize DX to 0
+    189	0058  B1 64			 MOV CL, 100
+    190	005A  F6 F9			     IDIV CL		  ; Quotient is	stored in AL, Remainder	in AH
+    191	005C  04 30			 ADD AL, 48	      ;	Conversion to ASCII
+    192	005E  26: 88 47	01		 MOV ES:[BX + 1] , AL ;	Writing	return in memory
+    193
+    194
+    195
+    196	0062  8A C4			 MOV AL, AH	      ;	We load	the number to convert into AX
+    197	0064  B4 00			 MOV AH, 0h
+    198	0066  BA 0000			     MOV DX, 0		      ;	It is important	to initialize DX to 0
+    199	0069  B1 0A			 MOV CL, 10	      ;	Conversion to ASCII
+    200	006B  F6 F9			     IDIV CL		  ; Quotient is	stored in AL, Remainder	in AH
+    201							      ;	The remainder now is the last digit
+    202
+    203	006D  04 30			 ADD AL, 48	      ;	Conversion to ASCII
+    204	006F  26: 88 47	02		 MOV ES:[BX + 2] , AL ;	Writing	return in memory
+    205	0073  80 C4 30			 ADD AH, 48	      ;	Conversion to ASCII
+    206	0076  26: 88 67	03		 MOV ES:[BX + 3] , AH ;	Writing	return in memory
+    207
+    208
+    209					 ; Restoring
+    210	007A  07 5A 59 5B 58		 POP ES	DX CX BX AX
+    211	007F  5D			 POP BP
+    212
+    213	0080  CB			 ret
+    214
+    215	0081			     _fillUpAttempt ENDP
+    216
+    217
+    218				     ; END OF CODE SEGMENT
+    219	0081			     _TEXT ENDS
+    220				     END
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:41	    Page 5
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??date				  Text	 "04/12/18"
+??filename			  Text	 "pract3a "
+??time				  Text	 "21:29:41"
+??version			  Number 0200
+@Cpu				  Text	 0101H
+@FileName			  Text	 pract3a
+@WordSize			  Text	 2
+@curseg				  Text	 _TEXT
+ENDING				  Near	 _TEXT:0031
+REPET				  Near	 _TEXT:002E
+_checkSecretNumber		  Far	 _TEXT:0000
+_fillUpAttempt			  Far	 _TEXT:0036
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+_TEXT				  16  0081 Byte	  Public  CODE
+

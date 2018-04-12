@@ -55,17 +55,17 @@ _checkSecretNumber PROC FAR
     ; It is easier to do it in ASCII, to avoid the conversion code.
     
     CMP AL, AH  ; Argument[0] vs Argument[1]  
-    JE REPE     
+    JE REPET     
     CMP AL, DL  ; Argument[0] vs Argument[2]
-    JE REPE
+    JE REPET
     CMP AL, DH  ; Argument[0] vs Argument[3]
-    JE REPE 
+    JE REPET
     CMP AH, DL  ; Argument[1] vs Argument[2]
-    JE REPE
+    JE REPET
     CMP AH, DH  ; Argument[1] vs Argument[3]
-    JE REPE    
+    JE REPET    
     CMP DL, DH  ; Argument[2] vs Argument[3]
-    JE REPE
+    JE REPET
 
     ; If any of this comparations are truth, there are repeated digits.
     ; In this case, we do AX=1 and return (see REPE tag)
@@ -74,7 +74,7 @@ _checkSecretNumber PROC FAR
     MOV AX, 00h
     JMP ENDING
 
-REPE:
+REPET:
 
     MOV AX, 01h
 

@@ -1,0 +1,60 @@
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:42	    Page 1
+pract3b.ASM
+
+
+
+      1				     ;**************************************************************************
+      2				     ; MICROPROCESSOR-BASED SYSTEMS
+      3				     ; LAB SESSION 2
+      4				     ; FILE: pract3b.asm
+      5				     ; AUTHORS:	Emilio Cuesta Fernandez	- Alejandro Sanchez Sanz
+      6				     ; COUPLE NUMBER: 8
+      7				     ; GROUP: 2351
+      8				     ;**************************************************************************
+      9
+     10
+     11				     ; CODE SEGMENT DEFINITION
+     12	0000			     _TEXT SEGMENT BYTE	PUBLIC 'CODE'
+     13				     ASSUME CS:	_TEXT
+     14
+     15				     PUBLIC _computeMatches
+     16	0000			     _computeMatches PROC FAR
+     17
+     18
+     19	0000			     _computeMatches ENDP
+     20
+     21
+     22				     PUBLIC _computeSemiMatches
+     23	0000			     _computeSemiMatches PROC FAR
+     24
+     25
+     26	0000  CB			 ret
+     27	0001			     _computeSemiMatches ENDP
+     28
+     29
+     30				     ; END OF CODE SEGMENT
+     31	0001			     _TEXT ENDS
+     32				     END
+Turbo Assembler	 Version 2.0	    04/12/18 21:29:42	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??date				  Text	 "04/12/18"
+??filename			  Text	 "pract3b "
+??time				  Text	 "21:29:42"
+??version			  Number 0200
+@Cpu				  Text	 0101H
+@FileName			  Text	 pract3b
+@WordSize			  Text	 2
+@curseg				  Text	 _TEXT
+_computeMatches			  Far	 _TEXT:0000
+_computeSemiMatches		  Far	 _TEXT:0000
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+_TEXT				  16  0001 Byte	  Public  CODE
+
