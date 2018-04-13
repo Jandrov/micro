@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:32	    Page 1
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:17	    Page 1
 pract3a.ASM
 
 
@@ -60,7 +60,7 @@ pract3a.ASM
      55	0006  C4 5E 06			 LES BX, [BP + 6]
      56
      57					 ; We store in AX the first two	ASCII characters and in	DX the next ones.
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:32	    Page 2
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:17	    Page 2
 pract3a.ASM
 
 
@@ -122,7 +122,7 @@ pract3a.ASM
     112	0037  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
     113				     the stack)
     114							 ; We do that to access	the arguments of the function in an easier way:
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:32	    Page 3
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:17	    Page 3
 pract3a.ASM
 
 
@@ -184,7 +184,7 @@ pract3a.ASM
     169
     170					 ; Getting the direction to access to attemptDigits and	store the digits
     171
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:32	    Page 4
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:17	    Page 4
 pract3a.ASM
 
 
@@ -232,7 +232,7 @@ pract3a.ASM
     212				     ; END OF CODE SEGMENT
     213	0078			     _TEXT ENDS
     214				     END
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:32	    Page 5
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:17	    Page 5
 Symbol Table
 
 
@@ -242,7 +242,7 @@ Symbol Name			  Type	 Value
 
 ??date				  Text	 "04/13/18"
 ??filename			  Text	 "pract3a "
-??time				  Text	 "16:58:32"
+??time				  Text	 "18:56:17"
 ??version			  Number 0200
 @Cpu				  Text	 0101H
 @FileName			  Text	 pract3a

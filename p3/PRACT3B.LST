@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 1
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:18	    Page 1
 pract3b.ASM
 
 
@@ -12,153 +12,216 @@ pract3b.ASM
       7				     ; GROUP: 2351
       8				     ;**************************************************************************
       9
-     10
-     11				     ; CODE SEGMENT DEFINITION
-     12	0000			     _TEXT SEGMENT BYTE	PUBLIC 'CODE'
-     13				     ASSUME CS:	_TEXT
-     14
-     15				     PUBLIC _computeMatches
-     16	0000			     _computeMatches PROC FAR
+     10				     ; CODE SEGMENT DEFINITION
+     11	0000			     _TEXT SEGMENT BYTE	PUBLIC 'CODE'
+     12				     ASSUME CS:	_TEXT
+     13
+     14				     PUBLIC _computeMatches
+     15	0000			     _computeMatches PROC FAR
+     16
      17
-     18
-     19	0000  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
-     20				     after these function.
-     21							 ; Without that	value, the main	program	would lose the reference.
-     22	0001  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
-     23				     the stack)
-     24							 ; We do that to access	the arguments of the function in an easier way:
-     25							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
-     26				     an	integer	which
-     27							 ;     correct values depends on the number and	the size of the	arguments.
-     28							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
-     29				     they aren't needed	in this	function
-     30
-     31					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
-     32				     restore them at the end of	the procedure.
-     33					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
-     34
-     35	0003  53 51 52 06 1E		 PUSH BX CX DX ES DS ; It is necessary to push de ES/DS	register because of the	LES/LEA	    +
-     36				     instruction, that modifies	it.
-     37							     ; We dont store Ax	because	we are supposed	to write the return value on+
-     38				     it.
+     18	0000  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
+     19				     after these function.
+     20							 ; Without that	value, the main	program	would lose the reference.
+     21	0001  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
+     22				     the stack)
+     23							 ; We do that to access	the arguments of the function in an easier way:
+     24							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
+     25				     an	integer	which
+     26							 ;     correct values depends on the number and	the size of the	arguments.
+     27							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
+     28				     they aren't needed	in this	function
+     29
+     30					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
+     31				     restore them at the end of	the procedure.
+     32					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
+     33
+     34	0003  53 51 52 57 06 1E		 PUSH BX CX DX DI ES DS	; It is	necessary to push de ES/DS register because of the LES/LEA  +
+     35				     instruction, that modifies	it.
+     36							     ; We dont store Ax	because	we are supposed	to write the return value on+
+     37				     it.
+     38
      39
-     40
-     41					 ; The arguments of this function are:
-     42					 ;		    * unsigned char* secretNum
-     43					 ;		    * unsigned char* attemptDigits
-     44					 ;
-     45					 ; The return direction	gaps takes 4 bytes (2 bytes from segment and another 2 from offset).
-     46					 ; The BP gap takes another 2 bytes
-     47
-     48					 ; The current stack state is similar to this:	 SEG attemptDigits	BP+12
-     49					 ;						 OFFSET	attemptDigits	BP+10
-     50					 ;						 SEG secretNum		BP+8
-     51					 ;						 OFFSET	secretNum	BP+6
-     52					 ;						 SEG return@		BP+4
-     53					 ;						 OFFSET	return@		BP+2
-     54					 ;						 BP			BP
-     55					 ;						 ...
+     40					 ; The arguments of this function are:
+     41					 ;		    * unsigned char* secretNum
+     42					 ;		    * unsigned char* attemptDigits
+     43					 ;
+     44					 ; The return direction	gaps takes 4 bytes (2 bytes from segment and another 2 from offset).
+     45					 ; The BP gap takes another 2 bytes
+     46
+     47					 ; The current stack state is similar to this:	 SEG attemptDigits	BP+12
+     48					 ;						 OFFSET	attemptDigits	BP+10
+     49					 ;						 SEG secretNum		BP+8
+     50					 ;						 OFFSET	secretNum	BP+6
+     51					 ;						 SEG return@		BP+4
+     52					 ;						 OFFSET	return@		BP+2
+     53					 ;						 BP			BP
+     54					 ;						 ...
+     55
      56
-     57
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 2
+     57					 ; Loading arguments
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:18	    Page 2
 pract3b.ASM
 
 
 
-     58					 ; Loading arguments
-     59
-     60	0008  C4 5E 06			 LES BX, [BP + 6]	     ; We store	secretNum direction in ES/BX
-     61	000B  C5 4E 0A			 LDS CX, [BP + 10]	     ; We store	attemptDigits direction	in DS/CX
+     58
+     59	0009  C4 5E 06			 LES BX, [BP + 6]	     ; We store	secretNum direction in ES/BX
+     60	000C  C5 4E 0A			 LDS CX, [BP + 10]	     ; We store	attemptDigits direction	in DS/CX
+     61
      62
-     63
-     64	000E  B8 0000			 MOV AX, 0		     ; We initialice the number	of coincidences	to 0
-     65	0011  BF 0000			 MOV DI, 0		     ; We will iterate using DI
-     66
-     67	0014			     LOOPING:
-     68
-     69
-     70	0014  8B 5E 06			 MOV BX, [BP+6]
-     71	0017  26: 8A 31			 MOV DH, ES:[BX][DI]	     ; Loading in DH the secretNum digit indicated by DI
-     72	001A  8B D9			 MOV BX, CX
-     73	001C  8A 11			 MOV DL, DS:[BX][DI]	     ; Loading in DL the attempDigits digit indicated by DI
-     74	001E  3A F2			 CMP DH, DL		     ; We compare their	ASCII codes
-     75	0020  75 09			 JNE COINCIDENCE	     ; If they are equal, we jump
+     63	000F  B8 0000			 MOV AX, 0		     ; We initialice the number	of coincidences	to 0
+     64	0012  BF 0000			 MOV DI, 0		     ; We will iterate using DI
+     65
+     66	0015			     LOOPING:
+     67
+     68	0015  8B 5E 06			 MOV BX, [BP+6]
+     69	0018  26: 8A 31			 MOV DH, ES:[BX][DI]	     ; Loading in DH the secretNum digit indicated by DI
+     70	001B  8B D9			 MOV BX, CX
+     71	001D  8A 11			 MOV DL, DS:[BX][DI]	     ; Loading in DL the attempDigits digit indicated by DI
+     72	001F  3A F2			 CMP DH, DL		     ; We compare their	ASCII codes
+     73	0021  74 09			 JE COINCIDENCE		     ; If they are equal, we jump
+     74
+     75	0023			     BACKSTEP:
      76
-     77	0022			     BACKSTEP:
-     78
-     79	0022  47			 INC DI			     ; We increment DI
-     80	0023  83 FF 04			 CMP DI, 4		     ; Stop condition: The 4 digits have already been compared.
-     81	0026  75 EC			 JNE LOOPING		     ; Restart the loop
+     77	0023  47			 INC DI			     ; We increment DI
+     78	0024  83 FF 04			 CMP DI, 4		     ; Stop condition: The 4 digits have already been compared.
+     79	0027  75 EC			 JNE LOOPING		     ; Restart the loop
+     80
+     81	0029  EB 06 90			 JMP ENDING		     ; End of loop
      82
-     83	0028  EB 06 90			 JMP ENDING		     ; End of loop
+     83	002C			     COINCIDENCE:
      84
-     85	002B			     COINCIDENCE:
-     86
-     87	002B  05 0001			 ADD AX, 1		     ; If a coincidence	has happened, we increment the value of	AX  +
-     88				     (which is also where the return value must	be stored)
-     89	002E  EB F2			 JMP BACKSTEP		     ; The loop	must go	on till	the Stop Condition is True
-     90
+     85	002C  05 0001			 ADD AX, 1		     ; If a coincidence	has happened, we increment the value of	AX  +
+     86				     (which is also where the return value must	be stored)
+     87	002F  EB F2			 JMP BACKSTEP		     ; The loop	must go	on until the Stop Condition is True
+     88
+     89
+     90	0031			     ENDING:
      91
-     92	0030			     ENDING:
-     93
-     94					 ; Restoring
-     95	0030  1F 07 5A 59 5B 58		 POP DS	ES DX CX BX AX
-     96	0036  5D			 POP BP
-     97
-     98	0037  CB			 ret
-     99	0038			     _computeMatches ENDP
-    100
-    101
-    102				     PUBLIC _computeSemiMatches
-    103	0038			     _computeSemiMatches PROC FAR
-    104
-    105
-    106	0038  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
-    107				     after these function.
-    108							 ; Without that	value, the main	program	would lose the reference.
-    109	0039  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
-    110				     the stack)
-    111							 ; We do that to access	the arguments of the function in an easier way:
-    112							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
-    113				     an	integer	which
-    114							 ;     correct values depends on the number and	the size of the	arguments.
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 3
+     92					 ; Restoring
+     93	0031  1F 07 5F 5A 59 5B		 POP DS	ES DI DX CX BX
+     94	0037  5D			 POP BP
+     95
+     96	0038  CB			 ret
+     97	0039			     _computeMatches ENDP
+     98
+     99
+    100				     PUBLIC _computeSemiMatches
+    101	0039			     _computeSemiMatches PROC FAR
+    102
+    103	0039  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
+    104				     after these function.
+    105							 ; Without that	value, the main	program	would lose the reference.
+    106	003A  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
+    107				     the stack)
+    108							 ; We do that to access	the arguments of the function in an easier way:
+    109							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
+    110				     an	integer	which
+    111							 ;     correct values depends on the number and	the size of the	arguments.
+    112							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
+    113				     they aren't needed	in this	function
+    114
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:18	    Page 3
 pract3b.ASM
 
 
 
-    115							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
-    116				     they aren't needed	in this	function
-    117
-    118					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
-    119				     restore them at the end of	the procedure.
-    120					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
-    121
-    122	003B  50 53 51 52 06		 PUSH AX BX CX DX ES ; It is necessary to push de ES register because of the LES	    +
-    123				     instruction, that modifies	it.
-    124							     ; Now we do store AX, the function	is void	and the	main doesnt expect  +
-    125				     to	get a return value on AX.
-    126
-    127
-    128
-    129
-    130					 ; code
+    115					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
+    116				     restore them at the end of	the procedure.
+    117					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
+    118
+    119	003C  53 51 52 57 56 06	1E	 PUSH BX CX DX DI SI ES	DS ; It	is necessary to	push de	ES/DS register because of the	    +
+    120				     LES/LDS instruction, that modifies	it.
+    121								   ; We	dont store AX because we are supposed to write the return   +
+    122				     value on it.
+    123
+    124
+    125					 ; The arguments of this function are:
+    126					 ;		    * unsigned char* secretNum
+    127					 ;		    * unsigned char* attemptDigits
+    128					 ;
+    129					 ; The return direction	gaps takes 4 bytes (2 bytes from segment and another 2 from offset).
+    130					 ; The BP gap takes another 2 bytes
     131
-    132
-    133
-    134					 ; Restoring
-    135	0040  07 5A 59 5B 58		 POP ES	DX CX BX AX
-    136	0045  5D			 POP BP
-    137
-    138
-    139	0046  CB			 ret
-    140	0047			     _computeSemiMatches ENDP
+    132					 ; The current stack state is similar to this:	 SEG attemptDigits	BP+12
+    133					 ;						 OFFSET	attemptDigits	BP+10
+    134					 ;						 SEG secretNum		BP+8
+    135					 ;						 OFFSET	secretNum	BP+6
+    136					 ;						 SEG return@		BP+4
+    137					 ;						 OFFSET	return@		BP+2
+    138					 ;						 BP			BP
+    139					 ;						 ...
+    140
     141
-    142
-    143				     ; END OF CODE SEGMENT
-    144	0047			     _TEXT ENDS
-    145				     END
-Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 4
+    142					 ; Loading arguments
+    143
+    144	0043  C4 4E 06			 LES CX, [BP + 6]	     ; We store	secretNum direction in ES/CX
+    145	0046  C5 5E 0A			 LDS BX, [BP + 10]	     ; We store	attemptDigits direction	in DS/BX
+    146
+    147
+    148	0049  B8 0000			 MOV AX, 0		     ; We initialice the number	of semimatches to 0
+    149	004C  BF 0000			 MOV DI, 0		     ; We will iterate in secretNum using DI
+    150	004F  BE 0000			 MOV SI, 0		     ; We will iterate in atemptDigits using SI
+    151
+    152	0052			     EXTERNAL:
+    153	0052  8B 5E 0A			 MOV BX, [BP + 10]
+    154	0055  8A 10			 MOV DL, DS:[BX][SI]	     ; Loading in DL the attempDigits digit indicated by SI
+    155
+    156	0057			     INCREMENT:
+    157	0057  3B F7			 CMP SI, DI		     ; Comparing both indexes because matches are not considered as +
+    158				     semimatches
+    159	0059  75 06			 JNE INTERNAL
+    160	005B  47			 INC DI			     ; If they are equal, we increment attemptDigits' index
+    161	005C  83 FF 04			 CMP DI, 4		     ; This would be true after	comparing last digit of	secretNum   +
+    162				     with third	digit of attemptDigits
+    163	005F  74 20			 JE FINISH		     ; In this case, the iteration has finished
+    164
+    165	0061			     INTERNAL:
+    166	0061  8B D9			 MOV BX, CX
+    167	0063  26: 8A 31			 MOV DH, ES:[BX][DI]	     ; Loading in DH the secretNum digit indicated by DI
+    168
+    169	0066  3A F2			 CMP DH, DL		     ; We compare their	ASCII codes
+    170	0068  74 12			 JE SEMIMATCH		     ; If they are equal, we jump
+    171
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:18	    Page 4
+pract3b.ASM
+
+
+
+    172	006A			     CHECKS:
+    173
+    174	006A  47			 INC DI			     ; We increment DI (internal loop index)
+    175	006B  83 FF 04			 CMP DI, 4		     ; Stop condition: The 4 digits have already been compared.
+    176	006E  75 E7			 JNE INCREMENT		     ; Restart the internal loop
+    177	0070  BF 0000			 MOV DI, 0		     ; We reset	attemptDigits' index to	restart	the external loop
+    178	0073  46			 INC SI			     ; We increment SI (external loop index)
+    179	0074  83 FE 04			 CMP SI, 4		     ; Stop condition
+    180	0077  75 D9			 JNE EXTERNAL		     ; Restart the external loop
+    181
+    182	0079  EB 06 90			 JMP FINISH		     ; End of loop
+    183
+    184	007C			     SEMIMATCH:
+    185
+    186	007C  05 0001			 ADD AX, 1		     ; If a coincidence	has happened, we increment the value of	AX  +
+    187				     (which is also where the return value must	be stored)
+    188	007F  EB E9			 JMP CHECKS		     ; The loop	must go	on until the Stop Condition is True
+    189
+    190
+    191	0081			     FINISH:
+    192
+    193					 ; Restoring
+    194	0081  1F 07 5E 5F 5A 59	5B	 POP DS	ES SI DI DX CX BX
+    195	0088  5D			 POP BP
+    196
+    197	0089  CB			 ret
+    198	008A			     _computeSemiMatches ENDP
+    199
+    200
+    201				     ; END OF CODE SEGMENT
+    202	008A			     _TEXT ENDS
+    203				     END
+Turbo Assembler	 Version 2.0	    04/13/18 18:56:18	    Page 5
 Symbol Table
 
 
@@ -168,20 +231,26 @@ Symbol Name			  Type	 Value
 
 ??date				  Text	 "04/13/18"
 ??filename			  Text	 "pract3b "
-??time				  Text	 "16:58:33"
+??time				  Text	 "18:56:17"
 ??version			  Number 0200
 @Cpu				  Text	 0101H
 @FileName			  Text	 pract3b
 @WordSize			  Text	 2
 @curseg				  Text	 _TEXT
-BACKSTEP			  Near	 _TEXT:0022
-COINCIDENCE			  Near	 _TEXT:002B
-ENDING				  Near	 _TEXT:0030
-LOOPING				  Near	 _TEXT:0014
+BACKSTEP			  Near	 _TEXT:0023
+CHECKS				  Near	 _TEXT:006A
+COINCIDENCE			  Near	 _TEXT:002C
+ENDING				  Near	 _TEXT:0031
+EXTERNAL			  Near	 _TEXT:0052
+FINISH				  Near	 _TEXT:0081
+INCREMENT			  Near	 _TEXT:0057
+INTERNAL			  Near	 _TEXT:0061
+LOOPING				  Near	 _TEXT:0015
+SEMIMATCH			  Near	 _TEXT:007C
 _computeMatches			  Far	 _TEXT:0000
-_computeSemiMatches		  Far	 _TEXT:0038
+_computeSemiMatches		  Far	 _TEXT:0039
 
 Groups & Segments		  Bit Size Align  Combine Class
 
-_TEXT				  16  0047 Byte	  Public  CODE
+_TEXT				  16  008A Byte	  Public  CODE
 
