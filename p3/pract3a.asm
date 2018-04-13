@@ -48,7 +48,7 @@ _checkSecretNumber PROC FAR
     
     ; We store in AX the first two ASCII characters and in DX the next ones.
     MOV AX, ES:[BX]     ; That is, AH = Argument[1], AL= Argument[0]
-    MOV DX, ES:[BX+2]   ; That is, DH = Argument[3], DL= Argument[1]
+    MOV DX, ES:[BX+2]   ; That is, DH = Argument[3], DL= Argument[2]
         
     ; We compare all the possible combination bewteen digits
     ; It doesnt mind if we compare ASCII codes or the numbers directly
@@ -68,7 +68,7 @@ _checkSecretNumber PROC FAR
     JE REPET
 
     ; If any of this comparations are truth, there are repeated digits.
-    ; In this case, we do AX=1 and return (see REPE tag)
+    ; In this case, we do AX=1 and return (see REPET tag)
     ; If not, the number is OK to play the game: we do AX=0 and return.
 
     MOV AX, 00h
@@ -141,7 +141,6 @@ _fillUpAttempt PROC FAR
     ; and DX and AX to operate and get the digits separated.
     ; The argument of this function is a number from 0 to 9999 in int format. Therefore, it takes 2 bytes long (+1 stack position)
     ; The return will be done by changing the memory content the second argument points to ( 4 char => 4 bytes)
-    ; As the attemptDigits is a char*, we will need to change to ASCII first
     ; The return direction gap takes +2 positions (2 bytes from segment and another 2 from offset)
 
     ; Attempt is stored in CX
@@ -151,13 +150,12 @@ _fillUpAttempt PROC FAR
 
     LES BX, [BP + 8]
 
-    ;Now, we have to divide it to get the real digits. Then, we will get their ASCII code (return is char* type).
+    ;Now, we have to divide it to get the real digits. 
 
     MOV AX, CX           ; We load the number to convert into AX
 	MOV DX, 0 	         ; It is important to initialize DX to 0s  
     MOV CX, 1000         ; Divide by a 16 bit operand
 	IDIV CX              ; Quotient is stored in AX, Remainder in DX
-    ADD AL, 48           ; Conversion to ASCII
     MOV ES:[BX] , AL     ; Actually, we know the whole quotient will be stored in AL as the number is as maximum 9999
                 
 
@@ -165,7 +163,6 @@ _fillUpAttempt PROC FAR
 	MOV DX, 0 	         ; It is important to initialize DX to 0
     MOV CL, 100  
 	IDIV CL              ; Quotient is stored in AL, Remainder in AH
-    ADD AL, 48           ; Conversion to ASCII
     MOV ES:[BX + 1] , AL ; Writing return in memory
    
 
@@ -177,9 +174,7 @@ _fillUpAttempt PROC FAR
 	IDIV CL              ; Quotient is stored in AL, Remainder in AH
                          ; The remainder now is the last digit
 
-    ADD AL, 48           ; Conversion to ASCII
     MOV ES:[BX + 2] , AL ; Writing return in memory
-    ADD AH, 48           ; Conversion to ASCII
     MOV ES:[BX + 3] , AH ; Writing return in memory
  
 

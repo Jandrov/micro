@@ -1,0 +1,187 @@
+Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 1
+pract3b.ASM
+
+
+
+      1				     ;**************************************************************************
+      2				     ; MICROPROCESSOR-BASED SYSTEMS
+      3				     ; LAB SESSION 2
+      4				     ; FILE: pract3b.asm
+      5				     ; AUTHORS:	Emilio Cuesta Fernandez	- Alejandro Sanchez Sanz
+      6				     ; COUPLE NUMBER: 8
+      7				     ; GROUP: 2351
+      8				     ;**************************************************************************
+      9
+     10
+     11				     ; CODE SEGMENT DEFINITION
+     12	0000			     _TEXT SEGMENT BYTE	PUBLIC 'CODE'
+     13				     ASSUME CS:	_TEXT
+     14
+     15				     PUBLIC _computeMatches
+     16	0000			     _computeMatches PROC FAR
+     17
+     18
+     19	0000  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
+     20				     after these function.
+     21							 ; Without that	value, the main	program	would lose the reference.
+     22	0001  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
+     23				     the stack)
+     24							 ; We do that to access	the arguments of the function in an easier way:
+     25							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
+     26				     an	integer	which
+     27							 ;     correct values depends on the number and	the size of the	arguments.
+     28							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
+     29				     they aren't needed	in this	function
+     30
+     31					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
+     32				     restore them at the end of	the procedure.
+     33					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
+     34
+     35	0003  53 51 52 06 1E		 PUSH BX CX DX ES DS ; It is necessary to push de ES/DS	register because of the	LES/LEA	    +
+     36				     instruction, that modifies	it.
+     37							     ; We dont store Ax	because	we are supposed	to write the return value on+
+     38				     it.
+     39
+     40
+     41					 ; The arguments of this function are:
+     42					 ;		    * unsigned char* secretNum
+     43					 ;		    * unsigned char* attemptDigits
+     44					 ;
+     45					 ; The return direction	gaps takes 4 bytes (2 bytes from segment and another 2 from offset).
+     46					 ; The BP gap takes another 2 bytes
+     47
+     48					 ; The current stack state is similar to this:	 SEG attemptDigits	BP+12
+     49					 ;						 OFFSET	attemptDigits	BP+10
+     50					 ;						 SEG secretNum		BP+8
+     51					 ;						 OFFSET	secretNum	BP+6
+     52					 ;						 SEG return@		BP+4
+     53					 ;						 OFFSET	return@		BP+2
+     54					 ;						 BP			BP
+     55					 ;						 ...
+     56
+     57
+Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 2
+pract3b.ASM
+
+
+
+     58					 ; Loading arguments
+     59
+     60	0008  C4 5E 06			 LES BX, [BP + 6]	     ; We store	secretNum direction in ES/BX
+     61	000B  C5 4E 0A			 LDS CX, [BP + 10]	     ; We store	attemptDigits direction	in DS/CX
+     62
+     63
+     64	000E  B8 0000			 MOV AX, 0		     ; We initialice the number	of coincidences	to 0
+     65	0011  BF 0000			 MOV DI, 0		     ; We will iterate using DI
+     66
+     67	0014			     LOOPING:
+     68
+     69
+     70	0014  8B 5E 06			 MOV BX, [BP+6]
+     71	0017  26: 8A 31			 MOV DH, ES:[BX][DI]	     ; Loading in DH the secretNum digit indicated by DI
+     72	001A  8B D9			 MOV BX, CX
+     73	001C  8A 11			 MOV DL, DS:[BX][DI]	     ; Loading in DL the attempDigits digit indicated by DI
+     74	001E  3A F2			 CMP DH, DL		     ; We compare their	ASCII codes
+     75	0020  75 09			 JNE COINCIDENCE	     ; If they are equal, we jump
+     76
+     77	0022			     BACKSTEP:
+     78
+     79	0022  47			 INC DI			     ; We increment DI
+     80	0023  83 FF 04			 CMP DI, 4		     ; Stop condition: The 4 digits have already been compared.
+     81	0026  75 EC			 JNE LOOPING		     ; Restart the loop
+     82
+     83	0028  EB 06 90			 JMP ENDING		     ; End of loop
+     84
+     85	002B			     COINCIDENCE:
+     86
+     87	002B  05 0001			 ADD AX, 1		     ; If a coincidence	has happened, we increment the value of	AX  +
+     88				     (which is also where the return value must	be stored)
+     89	002E  EB F2			 JMP BACKSTEP		     ; The loop	must go	on till	the Stop Condition is True
+     90
+     91
+     92	0030			     ENDING:
+     93
+     94					 ; Restoring
+     95	0030  1F 07 5A 59 5B 58		 POP DS	ES DX CX BX AX
+     96	0036  5D			 POP BP
+     97
+     98	0037  CB			 ret
+     99	0038			     _computeMatches ENDP
+    100
+    101
+    102				     PUBLIC _computeSemiMatches
+    103	0038			     _computeSemiMatches PROC FAR
+    104
+    105
+    106	0038  55			 PUSH BP	 ; We push BP because we want the main program stack to	be accesed correctly+
+    107				     after these function.
+    108							 ; Without that	value, the main	program	would lose the reference.
+    109	0039  8B EC			 MOV BP, SP	 ; Now,	we initialice BP as SP (which points to	the last pushed	element	in  +
+    110				     the stack)
+    111							 ; We do that to access	the arguments of the function in an easier way:
+    112							 ;   * All the passed arguments	can be accesed like this: [BP +	X],  being X+
+    113				     an	integer	which
+    114							 ;     correct values depends on the number and	the size of the	arguments.
+Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 3
+pract3b.ASM
+
+
+
+    115							 ; These also allows us	to have	some local variables under BP (BP - X),	but +
+    116				     they aren't needed	in this	function
+    117
+    118					 ; IMPORTANT: It is necessary to save the register values that the calling program had and  +
+    119				     restore them at the end of	the procedure.
+    120					 ; If we dont do that, we might	modifiy	something the program doesnt expect to be modified.
+    121
+    122	003B  50 53 51 52 06		 PUSH AX BX CX DX ES ; It is necessary to push de ES register because of the LES	    +
+    123				     instruction, that modifies	it.
+    124							     ; Now we do store AX, the function	is void	and the	main doesnt expect  +
+    125				     to	get a return value on AX.
+    126
+    127
+    128
+    129
+    130					 ; code
+    131
+    132
+    133
+    134					 ; Restoring
+    135	0040  07 5A 59 5B 58		 POP ES	DX CX BX AX
+    136	0045  5D			 POP BP
+    137
+    138
+    139	0046  CB			 ret
+    140	0047			     _computeSemiMatches ENDP
+    141
+    142
+    143				     ; END OF CODE SEGMENT
+    144	0047			     _TEXT ENDS
+    145				     END
+Turbo Assembler	 Version 2.0	    04/13/18 16:58:33	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??date				  Text	 "04/13/18"
+??filename			  Text	 "pract3b "
+??time				  Text	 "16:58:33"
+??version			  Number 0200
+@Cpu				  Text	 0101H
+@FileName			  Text	 pract3b
+@WordSize			  Text	 2
+@curseg				  Text	 _TEXT
+BACKSTEP			  Near	 _TEXT:0022
+COINCIDENCE			  Near	 _TEXT:002B
+ENDING				  Near	 _TEXT:0030
+LOOPING				  Near	 _TEXT:0014
+_computeMatches			  Far	 _TEXT:0000
+_computeSemiMatches		  Far	 _TEXT:0038
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+_TEXT				  16  0047 Byte	  Public  CODE
+

@@ -24,7 +24,6 @@ int main( void )
         
         secretNum[i] = rand() % 10;
         repeated = checkSecretNumber(secretNum);
-        
     } while (repeated == TRUE);
         numAttempts = 0;
     do {
@@ -40,7 +39,7 @@ int main( void )
         fillUpAttempt( attempt, attemptDigits );
         // Linea de comprobacion, borrarla de cara a la entrega final
         printf("This is your attempt %u%u%u%u\n", attemptDigits[0], attemptDigits[1], attemptDigits[2], attemptDigits[3]);
-        // matches = computeMatches(secretNum, attemptDigits);
+        matches = computeMatches(secretNum, attemptDigits);
         // semimatches = computeSemiMatches(secretNum, attemptDigits);
         printf("Number of matches: %u\t", matches);
         printf("Number of semi-matches: %u\n", semimatches );
