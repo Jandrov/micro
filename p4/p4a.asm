@@ -26,10 +26,16 @@ CODE SEGMENT
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
 	; Check input parameters
+	MOV CL, [80h]   	; Load the size of the parameters in the command line
+	; No parameters
 
-
+	JMP STATUS
+	; /I as parameter
 
 	JMP INSTALLER
+	; /U as parameter
+
+	JMP UNINSTALLER
 
 	; GLOBAL VARIABLES
 	CODE_NUMBER DB 11  ; Codification number. We are team 8, so it is 8+3=11
@@ -37,18 +43,43 @@ INICIO:
 
 	CAESAR PROC FAR ; INTERRUPT SERVICE ROUTINE
 		; SAVE MODIFIED REGISTERS
-		PUSH 
+		PUSH SI BX AX
 		; ROUTINE INSTRUCTIONS
 		; We know the string is pointed by DS:DX
+		MOV SI, 0 		; Initialize the index
+		; We have to check AH
+		CMP AH, 12h 	; Encrypt and print
+		JE ENCRYPT
+		CMP AH, 13h 	; Decrypt and print
+		JE DECRYPT
+		JMP FIN
 
+		
+	ENCRYPT:
+		;MOV BL, DS:[DX][SI]
+		CMP DS:[DX][SI], '$'
+		JE PRINT
+		ADD DS:[DX][SI], CODE_NUMBER
+		INC SI
+		JMP ENCRYPT
 
+	DECRYPT:
+		;MOV BL, DS:[DX][SI]
+		CMP DS:[DX][SI], '$'
+		JE PRINT
+		SUB DS:[DX][SI], CODE_NUMBER
+		INC SI
+		JMP DECRYPT
 
+	PRINT:
+		MOV AH, 09h
+		INT 21h 		; Print the string after processing it. Offset is already in DX
 		; RESTORE MODIFIED REGISTERS
-		POP ...
+	FIN:
+		POP AX BX SI
 		IRET
 	CAESAR ENDP
 
-	...
 
 	INSTALLER PROC
 		MOV AX, 0
@@ -83,6 +114,11 @@ INICIO:
 		RET
 	UNSTALLER ENDP
 
+
+	STATUS:
+		; it shall show the installation status of the driver (installed/uninstalled), the team number and the names of the programmers
+
+		
 	; NOT SURE IF IT IS NECESSARY
 	MOV AX, 4C00h
 	INT 21h
