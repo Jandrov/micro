@@ -8,17 +8,11 @@
 ;**************************************************************************
 
 
-;**************************************************************************
-; STACK SEGMENT DEFINITION
-PILA SEGMENT STACK "STACK"
-	DB 40h DUP (0) ; initialization example, 64 bytes set to 0
-PILA ENDS
-
 
 ;**************************************************************************
 ; CODE SEGMENT DEFINITION
 CODE SEGMENT
-	ASSUME CS: CODE, SS: PILA
+	ASSUME CS: CODE
 	; First assembly instruction must be after the 256 bytes of PSP, so this is 
 	; necessary to generate a .COM file
 	ORG 256
@@ -26,7 +20,7 @@ CODE SEGMENT
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
 	; Check input parameters
-	MOV CL, [80h]   	; Load the size of the parameters in the command line
+	MOV CL, DS:[80h]   	; Load the size of the parameters in the command line
 	; No parameters
 
 	JMP STATUS
@@ -47,6 +41,7 @@ INICIO:
 		; ROUTINE INSTRUCTIONS
 		; We know the string is pointed by DS:DX
 		MOV SI, 0 		; Initialize the index
+		MOV BX, DX
 		; We have to check AH
 		CMP AH, 12h 	; Encrypt and print
 		JE ENCRYPT
@@ -56,18 +51,20 @@ INICIO:
 
 		
 	ENCRYPT:
-		;MOV BL, DS:[DX][SI]
-		CMP DS:[DX][SI], '$'
+		MOV AL, DS:[BX][SI]
+		CMP AL, '$'
 		JE PRINT
-		ADD DS:[DX][SI], CODE_NUMBER
+		ADD AL, CODE_NUMBER
+		MOV DS:[BX][SI], AL
 		INC SI
 		JMP ENCRYPT
 
 	DECRYPT:
-		;MOV BL, DS:[DX][SI]
-		CMP DS:[DX][SI], '$'
+		MOV AL, DS:[BX][SI]
+		CMP AL, '$'
 		JE PRINT
-		SUB DS:[DX][SI], CODE_NUMBER
+		SUB AL, CODE_NUMBER
+		MOV DS:[BX][SI], AL
 		INC SI
 		JMP DECRYPT
 
@@ -112,7 +109,7 @@ INICIO:
 		STI
 		POP ES DS CX BX AX
 		RET
-	UNSTALLER ENDP
+	UNINSTALLER ENDP
 
 
 	STATUS:
