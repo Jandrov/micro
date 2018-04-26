@@ -25,17 +25,24 @@ CODE SEGMENT
 
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
+	; Check input parameters
+
+
+
 	JMP INSTALLER
 
 	; GLOBAL VARIABLES
-	TABLE DB ''ABCDF ''		;; por ahora no se usan
+	CODE_NUMBER DB 11  ; Codification number. We are team 8, so it is 8+3=11
 	FLAG DW 0 				
 
 	CAESAR PROC FAR ; INTERRUPT SERVICE ROUTINE
 		; SAVE MODIFIED REGISTERS
-		PUSH ...
+		PUSH 
 		; ROUTINE INSTRUCTIONS
-		...
+		; We know the string is pointed by DS:DX
+
+
+
 		; RESTORE MODIFIED REGISTERS
 		POP ...
 		IRET
@@ -76,6 +83,9 @@ INICIO:
 		RET
 	UNSTALLER ENDP
 
+	; NOT SURE IF IT IS NECESSARY
+	MOV AX, 4C00h
+	INT 21h
 
 ; END OF CODE SEGMENT
 CODE ENDS
