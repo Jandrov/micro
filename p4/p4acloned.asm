@@ -19,6 +19,14 @@ CODE SEGMENT
 
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
+
+	INST DB "The driver is currently INSTALLED", 13, 10, '$'
+	UNINST DB "The driver is currently UNINSTALLED", 13, 10, '$'
+	TEAM DB "TEAM 8:", 13, 10
+	NOMBRE1 DB "Emilio Cuesta Fernandez", 13, 10
+	NOMBRE2 DB "Alejandro Sanchez Sanz", '$'
+
+
 	; Check input parameters
 	MOV CL, DS:[80h]   	; Load the size of the parameters in the command line
 	; No parameters

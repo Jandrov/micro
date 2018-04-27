@@ -1,0 +1,153 @@
+Turbo Assembler	 Version 2.0	    04/27/18 17:40:48	    Page 1
+p4b.asm
+
+
+
+      1				     ;**************************************************************************
+      2				     ; MICROPROCESSOR-BASED SYSTEMS
+      3				     ; LAB SESSION 2
+      4				     ; FILE: labs2b.asm
+      5				     ; AUTHORS:	Emilio Cuesta Fernandez	- Alejandro Sanchez Sanz
+      6				     ; COUPLE NUMBER: 8
+      7				     ; GROUP: 2351
+      8				     ;**************************************************************************
+      9
+     10				     ; DATA SEGMENT DEFINITION
+     11	0000			     DATOS SEGMENT
+     12
+     13
+     14	0000  1B 5B 32 4A 24		     CLEAR_SCREEN    DB	     1BH,"[2","J$"
+     15	0005  50 6C 65 61 73 65	2C+	 STATEMENT DB "Please, write the message you want to encode: ",	13, 10,	"$"
+     16	      20 77 72 69 74 65	20+
+     17	      74 68 65 20 6D 65	73+
+     18	      73 61 67 65 20 79	6F+
+     19	      75 20 77 61 6E 74	20+
+     20	      74 6F 20 65 6E 63	6F+
+     21	      64 65 3A 20 0D 0A	24
+     22
+     23	0036  54 68 65 20 6D 65	73+	 PRINT1	DB "The	message	you are	encoding is: ",	'$'
+     24	      73 61 67 65 20 79	6F+
+     25	      75 20 61 72 65 20	65+
+     26	      6E 63 6F 64 69 6E	67+
+     27	      20 69 73 3A 20 24
+     28	0058  64*(24)			 MESSAGE DB 100	dup('$')
+     29
+     30
+     31	00BC			     DATOS ENDS
+     32				     ;**************************************************************************
+     33				     ; STACK SEGMENT DEFINITION
+     34	0000			     PILA SEGMENT STACK	"STACK"
+     35	0000  40*(00)			     DB	40h DUP	(0) ; initialization example, 64 bytes set to 0
+     36	0040			     PILA ENDS
+     37
+     38
+     39				     ;**************************************************************************
+     40				     ; CODE SEGMENT DEFINITION
+     41	0000			     CODE SEGMENT
+     42				     ASSUME CS:	CODE, DS: DATOS, SS: PILA
+     43				     ; BEGINNING OF THE	MAIN PROCEDURE
+     44	0000			     INICIO PROC
+     45					     ; INITIALIZE THE SEGMENT REGISTERS
+     46	0000  B8 0000s			     MOV AX, DATOS
+     47	0003  8E D8			     MOV DS, AX
+     48
+     49
+     50					     ; CLEARS THE SCREEN
+     51	0005  B4 09			     MOV AH,9
+     52	0007  BA 0000r			     MOV DX, OFFSET CLEAR_SCREEN
+     53	000A  CD 21			     INT 21H
+     54
+     55					     ; PRINTS THE MESSAGE REQUEST
+     56	000C  BA 0005r			     MOV DX, OFFSET STATEMENT
+     57	000F  CD 21			     INT 21H
+Turbo Assembler	 Version 2.0	    04/27/18 17:40:48	    Page 2
+p4b.asm
+
+
+
+     58
+     59					     ; STORES THE MESSAGE IN MEMORY
+     60	0011  B4 0A			     MOV AH,0AH
+     61	0013  BA 0058r			     MOV DX, OFFSET MESSAGE
+     62	0016  C6 06 0058r 5A		     MOV MESSAGE[0], 90
+     63	001B  CD 21			     INT 21H
+     64
+     65
+     66	001D  80 3E 0059r 00		     CMP MESSAGE[1], 0
+     67	0022  74 1C			     JE	JEND
+     68
+     69
+     70
+     71
+     72					     ; PRINTS THE READ MESSAGE
+     73	0024  B4 09			     MOV AH,9
+     74	0026  BA 0036r			     MOV DX, OFFSET PRINT1
+     75	0029  CD 21			     INT 21H
+     76
+     77	002B  B4 09			     MOV AH,9
+     78	002D  BA 005Ar			     MOV DX, OFFSET MESSAGE[2]
+     79	0030  CD 21			     INT 21H
+     80
+     81
+     82					     ; We push DS in order to keep it for later
+     83	0032  1E			     push DS
+     84
+     85					     ; We use message[2] because the first two bytes of	the read message are the maximum    +
+     86				     size and the real size.
+     87					     ; We dont want to codify them
+     88	0033  8B DA			     MOV BX, DX
+     89	0035  C5 17			     LDS DX, [BX]
+     90
+     91					     ; CASE 1: ENCRYPTION
+     92	0037  B4 12			     MOV AH, 12h
+     93	0039  CD 55			     INT 55h
+     94
+     95					     ; CASE 2: DECRYPTION
+     96	003B  B4 13			     MOV AH, 13h
+     97	003D  CD 55			     INT 55h
+     98
+     99					     ; Restoring DS
+    100	003F  1F			     pop DS
+    101
+    102					     ; PROGRAM END
+    103	0040			     JEND:
+    104	0040  B8 4C00			 MOV AX, 4C00h
+    105	0043  CD 21			     INT 21h
+    106	0045			     INICIO ENDP
+    107
+    108				     ; We implement the	function to compute the	parity bits in an automatic way
+    109
+    110
+    111				     ; END OF CODE SEGMENT
+    112	0045			     CODE ENDS
+    113				     ; END OF PROGRAM. OBS: INCLUDES THE ENTRY FOR THE FIRST PROCEDURE (i.e. “INICIO”)
+    114				     END INICIO
+Turbo Assembler	 Version 2.0	    04/27/18 17:40:48	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "04/27/18"
+??FILENAME			  Text	 "p4b	  "
+??TIME				  Text	 "17:40:48"
+??VERSION			  Number 0200
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODE
+@FILENAME			  Text	 P4B
+@WORDSIZE			  Text	 2
+CLEAR_SCREEN			  Byte	 DATOS:0000
+INICIO				  Near	 CODE:0000
+JEND				  Near	 CODE:0040
+MESSAGE				  Byte	 DATOS:0058
+PRINT1				  Byte	 DATOS:0036
+STATEMENT			  Byte	 DATOS:0005
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODE				  16  0045 Para	  none
+DATOS				  16  00BC Para	  none
+PILA				  16  0040 Para	  Stack	  STACK
+
