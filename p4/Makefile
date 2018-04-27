@@ -8,7 +8,7 @@
 ##################################################################
 
 
-all: p4a.com p4b.exe test.exe #p4b.exe p4c.exe
+all: p4a.com p4b.exe #p4c.exe
 
 p4a.com: p4a.obj
     tlink /v /t p4a
@@ -28,18 +28,8 @@ p4b.obj: p4b.asm
 p4c.obj: p4c.asm
     tasm /zi p4c.asm ,, p4c.lst
 
-
-# for the test (delete!)
-
-test.exe: test.obj
-    tlink /v test
-
-test.obj: test.asm
-    tasm /zi test.asm ,, test.lst
-
-
-
 clean: 
+	del *.com
     del *.exe
     del *.obj
     del *.lst

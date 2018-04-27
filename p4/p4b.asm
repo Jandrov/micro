@@ -15,7 +15,7 @@ DATOS SEGMENT
     STATEMENT DB "Please, write the message you want to encode: ", 13, 10, "$"
 
     PRINT1 DB "The message you are encoding is: ", '$'
-    MESSAGE DB 100 dup('$')
+    MESSAGE DB 100 dup (?)
 
 
 DATOS ENDS
@@ -52,11 +52,13 @@ INICIO PROC
 	MOV MESSAGE[0], 90		
 	INT 21H
 
-
-	CMP MESSAGE[1], 0
+	MOV BH, 0
+	MOV BL, MESSAGE[1]
+	CMP BL, 0
 	JE JEND
 	 
 
+	MOV MESSAGE[BX+2], '$'
 
 
 	; PRINTS THE READ MESSAGE
@@ -74,8 +76,8 @@ INICIO PROC
 	
 	; We use message[2] because the first two bytes of the read message are the maximum size and the real size.
 	; We dont want to codify them
-	MOV BX, DX
-	LDS DX, [BX]
+	MOV BX, SEG MESSAGE
+	MOV DS, BX
 	
 	; CASE 1: ENCRYPTION	
 	MOV AH, 12h
