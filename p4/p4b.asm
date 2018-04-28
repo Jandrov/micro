@@ -14,9 +14,12 @@ DATOS SEGMENT
 	CLEAR_SCREEN 	DB 	1BH,"[2","J$"
     STATEMENT DB "Please, write the message you want to encode: ", 13, 10, "$"
 
+    ERRORCODE DB "The driver was not installed correctly"
     PRINT1 DB "The message you are encoding is: ", '$'
+    PRINT2 DB "The encoded message is: ", '$'
+    PRINT3 DB "The decoded message is: ", '$'
     MESSAGE DB 100 dup (?)
-
+    LINEJUMP DB 13,10, '$'
 
 DATOS ENDS
 ;**************************************************************************
@@ -35,7 +38,29 @@ INICIO PROC
 	; INITIALIZE THE SEGMENT REGISTERS
 	MOV AX, DATOS
 	MOV DS, AX
+	MOV AX, 0
+	MOV ES, AX
 
+	; We have to check if there is a driver already installed in 55h
+	MOV DI, ES:[ 55h*4 ]
+	MOV SI, ES:[ 55h*4 +2 ]
+	; We check if there are 0s in the interruption vector
+	; This fails in the first attempt
+	CMP DI, 0 	 
+	JNE DRIVER_OK
+	CMP SI, 0
+	JNE DRIVER_OK
+
+
+	; Printing an ERRORCODE
+	MOV DX, OFFSET ERRORCODE
+	MOV AH, 9
+	INT 21H
+
+
+	JMP JEND
+
+DRIVER_OK:
 
 	; CLEARS THE SCREEN
 	MOV AH,9	
@@ -52,43 +77,72 @@ INICIO PROC
 	MOV MESSAGE[0], 90		
 	INT 21H
 
+	; Check out if the MESSAGE'S lenght is not null
 	MOV BH, 0
 	MOV BL, MESSAGE[1]
 	CMP BL, 0
 	JE JEND
 	 
-
+	; In order to print the message correctly, we have to write the $ right after the last character
 	MOV MESSAGE[BX+2], '$'
 
 
-	; PRINTS THE READ MESSAGE
+	; PRINTS THE MESSAGE WRITTEN BY THE USER
 	MOV AH,9	
 	MOV DX, OFFSET PRINT1
 	INT 21H
-
-	MOV AH,9	
+	
 	MOV DX, OFFSET MESSAGE[2]
 	INT 21H
 
+	; Printing a line jump 
+	MOV DX, OFFSET LINEJUMP
+	INT 21H
 
-	; We push DS in order to keep it for later
+
+	; CASE 1: ENCRYPTION
+	MOV DX, OFFSET PRINT2
+	INT 21H
+
+	; We push DS in order to keep it: We might need it later
 	push DS
-	
+
 	; We use message[2] because the first two bytes of the read message are the maximum size and the real size.
 	; We dont want to codify them
+	MOV DX, OFFSET MESSAGE[2]
 	MOV BX, SEG MESSAGE
 	MOV DS, BX
 	
-	; CASE 1: ENCRYPTION	
+	; Calling of the interruption
+	; 12h => ENCRYPTION
 	MOV AH, 12h
-	INT 55h
-
-	; CASE 2: DECRYPTION
-	MOV AH, 13h
 	INT 55h
 
 	; Restoring DS
 	pop DS
+
+	; Printing a line jump 
+	MOV AH, 9h
+	MOV DX, OFFSET LINEJUMP
+	INT 21H
+
+
+	; CASE 2: DECRYPTION
+	MOV DX, OFFSET PRINT3
+	INT 21H
+
+	; We push DS in order to keep it: We might need it later
+	push DS
+	
+	MOV DX, OFFSET MESSAGE[2]
+	MOV AH, 13h
+
+	; Calling of the interruption
+	; 13h => DECRYPTION
+	INT 55h
+
+	POP DS
+
 	
 	; PROGRAM END
 JEND:

@@ -17,6 +17,10 @@ CODE SEGMENT
 	; necessary to generate a .COM file
 	ORG 256
 
+	STATUSPRINT1 DB "The driver is currently INSTALLED", 13, 10, '$'
+	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
+	AUTHORS DB "AUTHORS:", 13, 10, "GROUP 2351, TEAM 8", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 , '$'
+
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
 	; Check input parameters
@@ -46,6 +50,40 @@ ERROR:
 	JMP FINAL
 
 STATUS:
+	
+	
+	MOV AX, 0
+	MOV ES, AX
+	MOV BX, OFFSET CAESAR
+	MOV AX, CS
+	CLI
+	; We have to check if there is a different driver already installed in that position
+	MOV DI, ES:[ 55h*4 ]
+	MOV SI, ES:[ 55h*4 +2 ]
+	; We check if the driver that was installed is exactly our driver
+	STI
+	
+	CMP DI, BX
+	JNE UNINS
+	CMP SI, AX
+	JNE UNINS
+		
+	MOV DX, OFFSET STATUSPRINT1
+	MOV AH, 9 
+	INT 21H
+	JMP AUTH
+
+UNINS: 
+
+	MOV DX, OFFSET STATUSPRINT2
+	MOV AH, 9 
+	INT 21H	
+
+AUTH: 
+
+	MOV DX, OFFSET AUTHORS
+	INT 21H
+
 	; it shall show the installation status of the driver (installed/uninstalled), the team number and the names of the programmers
 	JMP FINAL
 
@@ -108,8 +146,11 @@ STATUS:
 		JMP BACK_DEC
 
 	PRINT:
+		
 		MOV AH, 09h
 		INT 21h 		; Print the string after processing it. Offset is already in DX
+		
+
 		; RESTORE MODIFIED REGISTERS
 	FIN:
 		POP AX BX SI
@@ -164,7 +205,6 @@ STATUS:
 		MOV DS:[ 55H*4+2 ], CX
 		STI
 		POP SI DI ES DS CX BX AX
-		RET
 	UNINSTALLER ENDP
 
 	OUR_DRIVER:

@@ -1,0 +1,215 @@
+Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 1
+p4b.asm
+
+
+
+      1				     ;**************************************************************************
+      2				     ; MICROPROCESSOR-BASED SYSTEMS
+      3				     ; LAB SESSION 2
+      4				     ; FILE: labs2b.asm
+      5				     ; AUTHORS:	Emilio Cuesta Fernandez	- Alejandro Sanchez Sanz
+      6				     ; COUPLE NUMBER: 8
+      7				     ; GROUP: 2351
+      8				     ;**************************************************************************
+      9
+     10				     ; DATA SEGMENT DEFINITION
+     11	0000			     DATOS SEGMENT
+     12
+     13
+     14	0000  1B 5B 32 4A 24		     CLEAR_SCREEN    DB	     1BH,"[2","J$"
+     15	0005  50 6C 65 61 73 65	2C+	 STATEMENT DB "Please, write the message you want to encode: ",	13, 10,	"$"
+     16	      20 77 72 69 74 65	20+
+     17	      74 68 65 20 6D 65	73+
+     18	      73 61 67 65 20 79	6F+
+     19	      75 20 77 61 6E 74	20+
+     20	      74 6F 20 65 6E 63	6F+
+     21	      64 65 3A 20 0D 0A	24
+     22
+     23	0036  54 68 65 20 64 72	69+	 ERRORCODE DB "The driver was not installed correctly"
+     24	      76 65 72 20 77 61	73+
+     25	      20 6E 6F 74 20 69	6E+
+     26	      73 74 61 6C 6C 65	64+
+     27	      20 63 6F 72 72 65	63+
+     28	      74 6C 79
+     29	005C  54 68 65 20 6D 65	73+	 PRINT1	DB "The	message	you are	encoding is: ",	'$'
+     30	      73 61 67 65 20 79	6F+
+     31	      75 20 61 72 65 20	65+
+     32	      6E 63 6F 64 69 6E	67+
+     33	      20 69 73 3A 20 24
+     34	007E  54 68 65 20 65 6E	63+	 PRINT2	DB "The	encoded	message	is: ", '$'
+     35	      6F 64 65 64 20 6D	65+
+     36	      73 73 61 67 65 20	69+
+     37	      73 3A 20 24
+     38	0097  54 68 65 20 64 65	63+	 PRINT3	DB "The	decoded	message	is: ", '$'
+     39	      6F 64 65 64 20 6D	65+
+     40	      73 73 61 67 65 20	69+
+     41	      73 3A 20 24
+     42	00B0  64*(??)			 MESSAGE DB 100	dup (?)
+     43	0114  0D 0A 24			 LINEJUMP DB 13,10, '$'
+     44
+     45	0117			     DATOS ENDS
+     46				     ;**************************************************************************
+     47				     ; STACK SEGMENT DEFINITION
+     48	0000			     PILA SEGMENT STACK	"STACK"
+     49	0000  40*(00)			     DB	40h DUP	(0) ; initialization example, 64 bytes set to 0
+     50	0040			     PILA ENDS
+     51
+     52
+     53				     ;**************************************************************************
+     54				     ; CODE SEGMENT DEFINITION
+     55	0000			     CODE SEGMENT
+     56				     ASSUME CS:	CODE, DS: DATOS, SS: PILA
+     57				     ; BEGINNING OF THE	MAIN PROCEDURE
+Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 2
+p4b.asm
+
+
+
+     58	0000			     INICIO PROC
+     59					     ; INITIALIZE THE SEGMENT REGISTERS
+     60	0000  B8 0000s			     MOV AX, DATOS
+     61	0003  8E D8			     MOV DS, AX
+     62	0005  B8 0000			     MOV AX, 0
+     63	0008  8E C0			     MOV ES, AX
+     64
+     65					     ; We have to check	if there is a driver already installed in 55h
+     66	000A  26: 8B 3E	0154		     MOV DI, ES:[ 55h*4	]
+     67	000F  26: 8B 36	0156		     MOV SI, ES:[ 55h*4	+2 ]
+     68	0014  83 FF 00			     CMP DI, 0
+     69	0017  75 08			     JNE DRIVER_OK
+     70	0019  83 FE 00			     CMP SI, 0
+     71	001C  75 03			     JNE DRIVER_OK
+     72
+     73	001E  EB 62 90			     JMP JEND
+     74
+     75
+     76
+     77	0021			     DRIVER_OK:
+     78					     ; CLEARS THE SCREEN
+     79	0021  B4 09			     MOV AH,9
+     80	0023  BA 0000r			     MOV DX, OFFSET CLEAR_SCREEN
+     81	0026  CD 21			     INT 21H
+     82
+     83					     ; PRINTS THE MESSAGE REQUEST
+     84	0028  BA 0005r			     MOV DX, OFFSET STATEMENT
+     85	002B  CD 21			     INT 21H
+     86
+     87					     ; STORES THE MESSAGE IN MEMORY
+     88	002D  B4 0A			     MOV AH,0AH
+     89	002F  BA 00B0r			     MOV DX, OFFSET MESSAGE
+     90	0032  C6 06 00B0r 5A		     MOV MESSAGE[0], 90
+     91	0037  CD 21			     INT 21H
+     92
+     93	0039  B7 00			     MOV BH, 0
+     94	003B  8A 1E 00B1r		     MOV BL, MESSAGE[1]
+     95	003F  80 FB 00			     CMP BL, 0
+     96	0042  74 3E			     JE	JEND
+     97
+     98
+     99	0044  C6 87 00B2r 24		     MOV MESSAGE[BX+2],	'$'
+    100
+    101
+    102					     ; PRINTS THE READ MESSAGE
+    103	0049  B4 09			     MOV AH,9
+    104	004B  BA 005Cr			     MOV DX, OFFSET PRINT1
+    105	004E  CD 21			     INT 21H
+    106
+    107	0050  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
+    108	0053  CD 21			     INT 21H
+    109
+    110					     ; Printing	a line jump
+    111	0055  BA 0114r			     MOV DX, OFFSET LINEJUMP
+    112	0058  CD 21			     INT 21H
+    113
+    114
+Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 3
+p4b.asm
+
+
+
+    115	005A  BA 007Er			     MOV DX, OFFSET PRINT2
+    116	005D  CD 21			     INT 21H
+    117
+    118					     ; We push DS in order to keep it for later
+    119	005F  1E			     push DS
+    120
+    121					     ; We use message[2] because the first two bytes of	the read message are the maximum    +
+    122				     size and the real size.
+    123					     ; We dont want to codify them
+    124	0060  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
+    125	0063  BB 0000s			     MOV BX, SEG MESSAGE
+    126	0066  8E DB			     MOV DS, BX
+    127
+    128					     ; CASE 1: ENCRYPTION
+    129
+    130	0068  B4 12			     MOV AH, 12h
+    131	006A  CD 55			     INT 55h
+    132
+    133					     ; Restoring DS
+    134	006C  1F			     pop DS
+    135
+    136					     ; Printing	a line jump
+    137	006D  B4 09			     MOV AH, 9h
+    138	006F  BA 0114r			     MOV DX, OFFSET LINEJUMP
+    139	0072  CD 21			     INT 21H
+    140
+    141	0074  BA 0097r			     MOV DX, OFFSET PRINT3
+    142	0077  CD 21			     INT 21H
+    143
+    144	0079  1E			     push DS
+    145
+    146					     ; CASE 2: DECRYPTION
+    147	007A  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
+    148	007D  B4 13			     MOV AH, 13h
+    149	007F  CD 55			     INT 55h
+    150
+    151	0081  1F			     POP DS
+    152
+    153
+    154					     ; PROGRAM END
+    155	0082			     JEND:
+    156	0082  B8 4C00			 MOV AX, 4C00h
+    157	0085  CD 21			     INT 21h
+    158	0087			     INICIO ENDP
+    159
+    160				     ; We implement the	function to compute the	parity bits in an automatic way
+    161
+    162
+    163				     ; END OF CODE SEGMENT
+    164	0087			     CODE ENDS
+    165				     ; END OF PROGRAM. OBS: INCLUDES THE ENTRY FOR THE FIRST PROCEDURE (i.e. “INICIO”)
+    166				     END INICIO
+Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "04/27/18"
+??FILENAME			  Text	 "p4b	  "
+??TIME				  Text	 "24:20:13"
+??VERSION			  Number 0200
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODE
+@FILENAME			  Text	 P4B
+@WORDSIZE			  Text	 2
+CLEAR_SCREEN			  Byte	 DATOS:0000
+DRIVER_OK			  Near	 CODE:0021
+ERRORCODE			  Byte	 DATOS:0036
+INICIO				  Near	 CODE:0000
+JEND				  Near	 CODE:0082
+LINEJUMP			  Byte	 DATOS:0114
+MESSAGE				  Byte	 DATOS:00B0
+PRINT1				  Byte	 DATOS:005C
+PRINT2				  Byte	 DATOS:007E
+PRINT3				  Byte	 DATOS:0097
+STATEMENT			  Byte	 DATOS:0005
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODE				  16  0087 Para	  none
+DATOS				  16  0117 Para	  none
+PILA				  16  0040 Para	  Stack	  STACK
+
