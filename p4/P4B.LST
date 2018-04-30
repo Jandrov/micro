@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 1
+Turbo Assembler	 Version 2.0	    04/30/18 03:16:13	    Page 1
 p4b.asm
 
 
@@ -60,7 +60,7 @@ p4b.asm
      55	0000			     CODE SEGMENT
      56				     ASSUME CS:	CODE, DS: DATOS, SS: PILA
      57				     ; BEGINNING OF THE	MAIN PROCEDURE
-Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 2
+Turbo Assembler	 Version 2.0	    04/30/18 03:16:13	    Page 2
 p4b.asm
 
 
@@ -75,111 +75,132 @@ p4b.asm
      65					     ; We have to check	if there is a driver already installed in 55h
      66	000A  26: 8B 3E	0154		     MOV DI, ES:[ 55h*4	]
      67	000F  26: 8B 36	0156		     MOV SI, ES:[ 55h*4	+2 ]
-     68	0014  83 FF 00			     CMP DI, 0
-     69	0017  75 08			     JNE DRIVER_OK
-     70	0019  83 FE 00			     CMP SI, 0
-     71	001C  75 03			     JNE DRIVER_OK
-     72
-     73	001E  EB 62 90			     JMP JEND
+     68					     ; We check	if there are 0s	in the interruption vector
+     69					     ; This fails in the first attempt
+     70	0014  83 FF 00			     CMP DI, 0
+     71	0017  75 0F			     JNE DRIVER_OK
+     72	0019  83 FE 00			     CMP SI, 0
+     73	001C  75 0A			     JNE DRIVER_OK
      74
      75
-     76
-     77	0021			     DRIVER_OK:
-     78					     ; CLEARS THE SCREEN
-     79	0021  B4 09			     MOV AH,9
-     80	0023  BA 0000r			     MOV DX, OFFSET CLEAR_SCREEN
-     81	0026  CD 21			     INT 21H
-     82
-     83					     ; PRINTS THE MESSAGE REQUEST
-     84	0028  BA 0005r			     MOV DX, OFFSET STATEMENT
-     85	002B  CD 21			     INT 21H
-     86
-     87					     ; STORES THE MESSAGE IN MEMORY
-     88	002D  B4 0A			     MOV AH,0AH
-     89	002F  BA 00B0r			     MOV DX, OFFSET MESSAGE
-     90	0032  C6 06 00B0r 5A		     MOV MESSAGE[0], 90
-     91	0037  CD 21			     INT 21H
-     92
-     93	0039  B7 00			     MOV BH, 0
-     94	003B  8A 1E 00B1r		     MOV BL, MESSAGE[1]
-     95	003F  80 FB 00			     CMP BL, 0
-     96	0042  74 3E			     JE	JEND
-     97
-     98
-     99	0044  C6 87 00B2r 24		     MOV MESSAGE[BX+2],	'$'
+     76					     ; Printing	an ERRORCODE
+     77	001E  BA 0036r			     MOV DX, OFFSET ERRORCODE
+     78	0021  B4 09			     MOV AH, 9
+     79	0023  CD 21			     INT 21H
+     80
+     81
+     82	0025  EB 62 90			     JMP JEND
+     83
+     84	0028			     DRIVER_OK:
+     85
+     86					     ; CLEARS THE SCREEN
+     87	0028  B4 09			     MOV AH,9
+     88	002A  BA 0000r			     MOV DX, OFFSET CLEAR_SCREEN
+     89	002D  CD 21			     INT 21H
+     90
+     91					     ; PRINTS THE MESSAGE REQUEST
+     92	002F  BA 0005r			     MOV DX, OFFSET STATEMENT
+     93	0032  CD 21			     INT 21H
+     94
+     95					     ; STORES THE MESSAGE IN MEMORY
+     96	0034  B4 0A			     MOV AH,0AH
+     97	0036  BA 00B0r			     MOV DX, OFFSET MESSAGE
+     98	0039  C6 06 00B0r 5A		     MOV MESSAGE[0], 90
+     99	003E  CD 21			     INT 21H
     100
-    101
-    102					     ; PRINTS THE READ MESSAGE
-    103	0049  B4 09			     MOV AH,9
-    104	004B  BA 005Cr			     MOV DX, OFFSET PRINT1
-    105	004E  CD 21			     INT 21H
+    101					     ; Check out if the	MESSAGE'S lenght is not	null
+    102	0040  B7 00			     MOV BH, 0
+    103	0042  8A 1E 00B1r		     MOV BL, MESSAGE[1]
+    104	0046  80 FB 00			     CMP BL, 0
+    105	0049  74 3E			     JE	JEND
     106
-    107	0050  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
-    108	0053  CD 21			     INT 21H
-    109
-    110					     ; Printing	a line jump
-    111	0055  BA 0114r			     MOV DX, OFFSET LINEJUMP
-    112	0058  CD 21			     INT 21H
-    113
-    114
-Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 3
+    107					     ; In order	to print the message correctly,	we have	to write the $ right after the last +
+    108				     character
+    109	004B  C6 87 00B2r 24		     MOV MESSAGE[BX+2],	'$'
+    110
+    111
+    112					     ; PRINTS THE MESSAGE WRITTEN BY THE USER
+    113	0050  B4 09			     MOV AH,9
+    114	0052  BA 005Cr			     MOV DX, OFFSET PRINT1
+Turbo Assembler	 Version 2.0	    04/30/18 03:16:13	    Page 3
 p4b.asm
 
 
 
-    115	005A  BA 007Er			     MOV DX, OFFSET PRINT2
-    116	005D  CD 21			     INT 21H
-    117
-    118					     ; We push DS in order to keep it for later
-    119	005F  1E			     push DS
-    120
-    121					     ; We use message[2] because the first two bytes of	the read message are the maximum    +
-    122				     size and the real size.
-    123					     ; We dont want to codify them
-    124	0060  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
-    125	0063  BB 0000s			     MOV BX, SEG MESSAGE
-    126	0066  8E DB			     MOV DS, BX
-    127
-    128					     ; CASE 1: ENCRYPTION
-    129
-    130	0068  B4 12			     MOV AH, 12h
-    131	006A  CD 55			     INT 55h
-    132
-    133					     ; Restoring DS
-    134	006C  1F			     pop DS
-    135
-    136					     ; Printing	a line jump
-    137	006D  B4 09			     MOV AH, 9h
-    138	006F  BA 0114r			     MOV DX, OFFSET LINEJUMP
-    139	0072  CD 21			     INT 21H
-    140
-    141	0074  BA 0097r			     MOV DX, OFFSET PRINT3
-    142	0077  CD 21			     INT 21H
+    115	0055  CD 21			     INT 21H
+    116
+    117	0057  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
+    118	005A  CD 21			     INT 21H
+    119
+    120					     ; Printing	a line jump
+    121	005C  BA 0114r			     MOV DX, OFFSET LINEJUMP
+    122	005F  CD 21			     INT 21H
+    123
+    124
+    125					     ; CASE 1: ENCRYPTION
+    126	0061  BA 007Er			     MOV DX, OFFSET PRINT2
+    127	0064  CD 21			     INT 21H
+    128
+    129					     ; We push DS in order to keep it: We might	need it	later
+    130	0066  1E			     push DS
+    131
+    132					     ; We use message[2] because the first two bytes of	the read message are the maximum    +
+    133				     size and the real size.
+    134					     ; We dont want to codify them
+    135	0067  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
+    136	006A  BB 0000s			     MOV BX, SEG MESSAGE
+    137	006D  8E DB			     MOV DS, BX
+    138
+    139					     ; Calling of the interruption
+    140					     ; 12h => ENCRYPTION
+    141	006F  B4 12			     MOV AH, 12h
+    142	0071  CD 55			     INT 55h
     143
-    144	0079  1E			     push DS
-    145
-    146					     ; CASE 2: DECRYPTION
-    147	007A  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
-    148	007D  B4 13			     MOV AH, 13h
-    149	007F  CD 55			     INT 55h
-    150
-    151	0081  1F			     POP DS
+    144					     ; Restoring DS
+    145	0073  1F			     pop DS
+    146
+    147					     ; Printing	a line jump
+    148	0074  B4 09			     MOV AH, 9h
+    149	0076  BA 0114r			     MOV DX, OFFSET LINEJUMP
+    150	0079  CD 21			     INT 21H
+    151
     152
-    153
-    154					     ; PROGRAM END
-    155	0082			     JEND:
-    156	0082  B8 4C00			 MOV AX, 4C00h
-    157	0085  CD 21			     INT 21h
-    158	0087			     INICIO ENDP
+    153					     ; CASE 2: DECRYPTION
+    154	007B  BA 0097r			     MOV DX, OFFSET PRINT3
+    155	007E  CD 21			     INT 21H
+    156
+    157					     ; We push DS in order to keep it: We might	need it	later
+    158	0080  1E			     push DS
     159
-    160				     ; We implement the	function to compute the	parity bits in an automatic way
-    161
+    160	0081  BA 00B2r			     MOV DX, OFFSET MESSAGE[2]
+    161	0084  B4 13			     MOV AH, 13h
     162
-    163				     ; END OF CODE SEGMENT
-    164	0087			     CODE ENDS
-    165				     ; END OF PROGRAM. OBS: INCLUDES THE ENTRY FOR THE FIRST PROCEDURE (i.e. “INICIO”)
-    166				     END INICIO
-Turbo Assembler	 Version 2.0	    04/27/18 24:20:13	    Page 4
+    163					     ; Calling of the interruption
+    164					     ; 13h => DECRYPTION
+    165	0086  CD 55			     INT 55h
+    166
+    167	0088  1F			     POP DS
+    168
+    169
+    170					     ; PROGRAM END
+    171	0089			     JEND:
+Turbo Assembler	 Version 2.0	    04/30/18 03:16:13	    Page 4
+p4b.asm
+
+
+
+    172	0089  B8 4C00			 MOV AX, 4C00h
+    173	008C  CD 21			     INT 21h
+    174	008E			     INICIO ENDP
+    175
+    176				     ; We implement the	function to compute the	parity bits in an automatic way
+    177
+    178
+    179				     ; END OF CODE SEGMENT
+    180	008E			     CODE ENDS
+    181				     ; END OF PROGRAM. OBS: INCLUDES THE ENTRY FOR THE FIRST PROCEDURE (i.e. “INICIO”)
+    182				     END INICIO
+Turbo Assembler	 Version 2.0	    04/30/18 03:16:13	    Page 5
 Symbol Table
 
 
@@ -187,19 +208,19 @@ Symbol Table
 
 Symbol Name			  Type	 Value
 
-??DATE				  Text	 "04/27/18"
+??DATE				  Text	 "04/30/18"
 ??FILENAME			  Text	 "p4b	  "
-??TIME				  Text	 "24:20:13"
+??TIME				  Text	 "03:16:13"
 ??VERSION			  Number 0200
 @CPU				  Text	 0101H
 @CURSEG				  Text	 CODE
 @FILENAME			  Text	 P4B
 @WORDSIZE			  Text	 2
 CLEAR_SCREEN			  Byte	 DATOS:0000
-DRIVER_OK			  Near	 CODE:0021
+DRIVER_OK			  Near	 CODE:0028
 ERRORCODE			  Byte	 DATOS:0036
 INICIO				  Near	 CODE:0000
-JEND				  Near	 CODE:0082
+JEND				  Near	 CODE:0089
 LINEJUMP			  Byte	 DATOS:0114
 MESSAGE				  Byte	 DATOS:00B0
 PRINT1				  Byte	 DATOS:005C
@@ -209,7 +230,7 @@ STATEMENT			  Byte	 DATOS:0005
 
 Groups & Segments		  Bit Size Align  Combine Class
 
-CODE				  16  0087 Para	  none
+CODE				  16  008E Para	  none
 DATOS				  16  0117 Para	  none
 PILA				  16  0040 Para	  Stack	  STACK
 

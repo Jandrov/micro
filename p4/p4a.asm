@@ -15,11 +15,10 @@ CODE SEGMENT
 	ASSUME CS: CODE
 	; First assembly instruction must be after the 256 bytes of PSP, so this is 
 	; necessary to generate a .COM file
+	
+	
 	ORG 256
-
-	STATUSPRINT1 DB "The driver is currently INSTALLED", 13, 10, '$'
-	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
-	AUTHORS DB "AUTHORS:", 13, 10, "GROUP 2351, TEAM 8", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 , '$'
+	
 
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
@@ -37,12 +36,17 @@ INICIO:
 	JNE ERROR
 	; /I as parameter
 	CMP CH, 'I'
-	JE INSTALLER
+	JE AUXINSJUMP
 	; /U as parameter
 	CMP CH, 'U'
 	JNE ERROR
 	CALL UNINSTALLER
 	JMP FINAL
+
+AUXINSJUMP:
+
+	JMP INSTALLER
+
 
 	; Reaching here means input parameters are wrong
 ERROR:
@@ -51,23 +55,23 @@ ERROR:
 
 STATUS:
 	
+	STATUSPRINT1 DB "The driver is currently INSTALLED", 13, 10, '$'
+	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
+	AUTHORS DB "AUTHORS:", 13, 10, "GROUP 2351, TEAM 8", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 , '$'
 	
 	MOV AX, 0
 	MOV ES, AX
-	MOV BX, OFFSET CAESAR
-	MOV AX, CS
-	CLI
-	; We have to check if there is a different driver already installed in that position
-	MOV DI, ES:[ 55h*4 ]
-	MOV SI, ES:[ 55h*4 +2 ]
-	; We check if the driver that was installed is exactly our driver
-	STI
+	;;PUSH DS
+
+	MOV CX, 0
+	MOV AX, 2351h
+	INT 55h
+	;;POP DS
+
+	CMP CX, 1
+	JNE UNINS
 	
-	CMP DI, BX
-	JNE UNINS
-	CMP SI, AX
-	JNE UNINS
-		
+	
 	MOV DX, OFFSET STATUSPRINT1
 	MOV AH, 9 
 	INT 21H
@@ -100,13 +104,23 @@ AUTH:
 		MOV SI, 0 		; Initialize the index
 		MOV BX, DX
 		; We have to check AH
+
+
 		CMP AH, 12h 	; Encrypt and print
 		JE ENCRYPT
 		CMP AH, 13h 	; Decrypt and print
 		JE DECRYPT
+		CMP AX, 2351h	; This is a secret code that will be used to tell us if the interruption is well installed or not
+		JE FLAG
 		JMP FIN
 
-		
+	FLAG:
+		MOV CX, 1 ; y would mean the interruption is installed.
+							 ; Its true it could be y originally a dont change, but we assume this wont happen 
+							 ; because to access to this point you have to know the code of the interrupt
+							 ; (AX must be 2351h,  that implies AH is not 12h or 13h)
+		JMP FIN 
+
 	ENCRYPT:
 		MOV AL, DS:[BX][SI]
 		CMP AL, '$'
