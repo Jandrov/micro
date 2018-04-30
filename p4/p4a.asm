@@ -15,10 +15,8 @@ CODE SEGMENT
 	ASSUME CS: CODE
 	; First assembly instruction must be after the 256 bytes of PSP, so this is 
 	; necessary to generate a .COM file
-	
-	
 	ORG 256
-	
+
 
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
@@ -26,7 +24,7 @@ INICIO:
 	MOV CL, DS:[80h]   	; Load the size of the parameters in the command line
 	; No parameters
 	CMP CL, 0
-	JE STATUS
+	CALL STATUS
 
 	; If there is a parameter, it must be 3 bytes long (space + / + I or space + / + U)
 	CMP CL, 3
@@ -45,52 +43,17 @@ INICIO:
 
 AUXINSJUMP:
 
-	JMP INSTALLER
-
+	CALL INSTALLER
 
 	; Reaching here means input parameters are wrong
 ERROR:
 	; Shows this message when there has been an error introducing the parameters
 	JMP FINAL
 
-STATUS:
-	
+	; Global Driver
 	STATUSPRINT1 DB "The driver is currently INSTALLED", 13, 10, '$'
 	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
-	AUTHORS DB "AUTHORS:", 13, 10, "GROUP 2351, TEAM 8", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 , '$'
-	
-	MOV AX, 0
-	MOV ES, AX
-	;;PUSH DS
-
-	MOV CX, 0
-	MOV AX, 2351h
-	INT 55h
-	;;POP DS
-
-	CMP CX, 1
-	JNE UNINS
-	
-	
-	MOV DX, OFFSET STATUSPRINT1
-	MOV AH, 9 
-	INT 21H
-	JMP AUTH
-
-UNINS: 
-
-	MOV DX, OFFSET STATUSPRINT2
-	MOV AH, 9 
-	INT 21H	
-
-AUTH: 
-
-	MOV DX, OFFSET AUTHORS
-	INT 21H
-
-	; it shall show the installation status of the driver (installed/uninstalled), the team number and the names of the programmers
-	JMP FINAL
-
+	AUTHORS DB "AUTHORS:", 13, 10, "GROUP 2351, TEAM 8", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 , '$'	
 	; GLOBAL VARIABLES
 	CODE_NUMBER DB 11  	; Codification number. We are team 8, so it is 8+3=11
 	MAX_VALUE DB 126 	; Maximum ASCII value we accept (~), in decimal
@@ -164,7 +127,6 @@ AUTH:
 		MOV AH, 09h
 		INT 21h 		; Print the string after processing it. Offset is already in DX
 		
-
 		; RESTORE MODIFIED REGISTERS
 	FIN:
 		POP AX BX SI
@@ -219,6 +181,7 @@ AUTH:
 		MOV DS:[ 55H*4+2 ], CX
 		STI
 		POP SI DI ES DS CX BX AX
+		RET
 	UNINSTALLER ENDP
 
 	OUR_DRIVER:
@@ -242,6 +205,46 @@ AUTH:
 		JNE UNINSTALL
 		; AQUI SE IMPRIMIRIA EL MENSAJE DE QUE NO HAY INSTALADO NADA ASI QUE NO DESINSTALAMOS
 	
+	STATUS PROC
+
+		
+		MOV AX, 0
+		MOV ES, AX
+		;;PUSH DS
+
+
+		MOV AH, 9
+		MOV AL, 0 
+		MOV DX, OFFSET AUTHORS
+		INT 21H
+
+		MOV CX, 0
+		MOV AX, 2351h
+		INT 55h
+		;;POP DS
+
+		CMP CX, 1
+		JNE UNINS
+		
+		
+		MOV DX, OFFSET STATUSPRINT1
+		MOV AH, 9 
+		INT 21H
+		JMP AUTH
+
+	UNINS: 
+
+		MOV DX, OFFSET STATUSPRINT2
+		MOV AH, 9 
+		INT 21H	
+
+	AUTH: 
+
+		MOV DX, OFFSET AUTHORS
+		INT 21H
+		RET
+
+	STATUS ENDP
 	
 
 	FINAL:	
