@@ -24,8 +24,11 @@ INICIO:
 	MOV CL, DS:[80h]   	; Load the size of the parameters in the command line
 	; No parameters
 	CMP CL, 0
+	JNE NEXT
 	CALL STATUS
+	JMP FINAL
 
+NEXT:
 	; If there is a parameter, it must be 3 bytes long (space + / + I or space + / + U)
 	CMP CL, 3
 	JNE ERROR
@@ -44,17 +47,23 @@ INICIO:
 AUXINSJUMP:
 
 	CALL INSTALLER
+	JMP FINAL
 
 	; Reaching here means input parameters are wrong
 ERROR:
 	; Shows this message when there has been an error introducing the parameters
 	JMP FINAL
 
-	; Global Driver
+	; Print variables for Installation/Uninstallation
+	COINCIDENCEPRINT DB "The driver you are trying to install is already installed", 13, 10, '$'
+	CONFLICT DB "There is another driver at 55h. Do you want to overwrite it? (write y/n)", 13, 10, '$'
+	ANSWER DB 3 dup(0)
+	; Print variables for Status Case
 	STATUSPRINT1 DB "The driver is currently INSTALLED", 13, 10, '$'
 	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
-	AUTHORS DB "AUTHORS:", 13, 10, "GROUP 2351, TEAM 8", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 , '$'	
-	; GLOBAL VARIABLES
+	AUTHORS DB "AUTHORS:", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 ,"GROUP 2351, TEAM 8", 13, 10,'$'	
+	
+	; Variables for Caser Cypher
 	CODE_NUMBER DB 11  	; Codification number. We are team 8, so it is 8+3=11
 	MAX_VALUE DB 126 	; Maximum ASCII value we accept (~), in decimal
 	MIN_VALUE DB 32 	; Minimum ASCII value we accept (space), in decimal
@@ -73,15 +82,16 @@ ERROR:
 		JE ENCRYPT
 		CMP AH, 13h 	; Decrypt and print
 		JE DECRYPT
-		CMP AX, 2351h	; This is a secret code that will be used to tell us if the interruption is well installed or not
-		JE FLAG
+		CMP AH, 08h     ; This is an extra feature that will be used to tell us if the interruption is installed or not
+		JE DRIVER_PRESENCE
 		JMP FIN
 
-	FLAG:
-		MOV CX, 1 ; y would mean the interruption is installed.
-							 ; Its true it could be y originally a dont change, but we assume this wont happen 
-							 ; because to access to this point you have to know the code of the interrupt
-							 ; (AX must be 2351h,  that implies AH is not 12h or 13h)
+	DRIVER_PRESENCE:
+
+		MOV CL, 1		; If the interruption is installed, CL will be modified and store a one.
+						; We can assume the person who uses this functionality knows how it works and 
+						; wont have a 1 in CL before the call.
+
 		JMP FIN 
 
 	ENCRYPT:
@@ -138,17 +148,58 @@ ERROR:
 		MOV ES, AX
 		MOV BX, OFFSET CAESAR
 		MOV AX, CS
-		CLI
+		
 		; We have to check if there was a different driver already installed in that position
-		MOV DI, ES:[ 55h*4 ]
-		MOV SI, ES:[ 55h*4 +2 ]
-		; We first check if there was no driver installed at all
-		CMP DI, 0 	 
-		JNE OUR_DRIVER
-		CMP SI, 0
-		JNE DRIVER_EXISTS
+		MOV CL, 0
+		CALL CHECK_DRIVER
+
+		; If there are no drivers, we dont have any problems for the installation
+		CMP CL, 0
+		JE INSTALL
+
+		; If there is a different driver, we ask the user what to do with it
+		CMP CL, 2
+		JE OTHER_DRIVER
+
+		; In any other case, we assume the installed driver is ours, therefore there is no need to reinstall it
+		MOV AH, 09h
+		MOV DX, OFFSET COINCIDENCEPRINT
+		INT 21H
+		
+	ERROREND:
+		STI
+		RET 
+
+	OTHER_DRIVER:
+
+		PUSH AX BX DX
+
+		MOV DX, OFFSET CONFLICT
+		MOV AH, 9 
+		INT 21H	
+
+		; Reading answer from keyboard
+		MOV AH,0AH			
+		MOV DX, OFFSET ANSWER
+		MOV ANSWER[0], 2		
+		INT 21H
+
+		; Check out if the MESSAGE'S lenght is not null
+		MOV BL, ANSWER[1]
+		CMP BL, 0
+		JE ERROREND
+
+		POP DX BX AX
+
+		; Answer check
+		CMP ANSWER[2], 'y'
+		JE INSTALL
+
+		JMP ERROREND
 
 	INSTALL:
+
+		CLI
 		MOV ES:[ 55h*4 ], BX
 		MOV ES:[ 55h*4+2 ], AX
 		STI
@@ -162,79 +213,66 @@ ERROR:
 		PUSH AX BX CX DS ES DI SI
 		MOV CX, 0
 		MOV DS, CX 						; SEGMENT OF INTERRUPT VECTORS
-		MOV SI, DS:[ 55h*4+2 ] 			; READ CAESAR SEGMENT
-		MOV DI, DS:[ 55h*4 ]			; READ CAESAR OFFSET
-		; We first check if there was no driver installed at all
-		CMP DI, 0 	 
-		JE NO_DRIVER
+ 
+		MOV CL, 0
+		CALL CHECK_DRIVER
+
+		; If there are no drivers to unistall, we dont do anything
+		CMP CL, 0 	 
+		JE UNSEND
+		; If there is a different driver, we dont unistall it.
+		; If we needed to, we can call INSTALL and we will be offered to overwrite the previous installation
+		CMP CL, 2
+		JE UNSEND
+
+		; Otherwise, our driver is installed and we want to uninstall it
 
 	UNINSTALL:
+		MOV SI, DS:[ 55h*4+2 ] 			; READ CAESAR SEGMENT	
 		MOV ES, SI
 		MOV BX, ES:[ 2Ch ] 				; READ SEGMENT OF ENVIRONMENT FROM CAESAR’S PSP. 
 		MOV AH, 49h 
 		INT 21h 						; RELEASE CAESAR SEGMENT (ES)
 		MOV ES, BX
 		INT 21h 						; RELEASE SEGMENT OF ENVIRONMENT VARIABLES OF CAESAR
+		
 		; SET VECTOR OF INTERRUPT 55H TO ZERO
+		
+		MOV CX, 0
 		CLI
-		MOV DS:[ 55H*4 ], CX 			; CX = 0
+		MOV DS:[ 55H*4 ], CX 			; DS = 0, CX = 0
 		MOV DS:[ 55H*4+2 ], CX
 		STI
+
+	UNSEND:
+
 		POP SI DI ES DS CX BX AX
 		RET
 	UNINSTALLER ENDP
 
-	OUR_DRIVER:
-		; We check if the driver that was installed is exactly our driver
-		CMP DI, BX
-		JNE DRIVER_EXISTS
-		CMP SI, AX
-		JNE DRIVER_EXISTS
-		; AQUI SE IMPRIMIRIA EL MENSAJE DE QUE YA ESTA INSTALADA NUESTRO DRIVER
-		JMP FINAL
 
-	DRIVER_EXISTS:
-
-		; Aqui imprimimos pregunta para ver si instalar o no encima de la otra
-		JMP INSTALL
-
-		JMP FINAL
-
-	NO_DRIVER:
-		CMP SI, 0
-		JNE UNINSTALL
-		; AQUI SE IMPRIMIRIA EL MENSAJE DE QUE NO HAY INSTALADO NADA ASI QUE NO DESINSTALAMOS
-	
 	STATUS PROC
 
-		
 		MOV AX, 0
 		MOV ES, AX
 		;;PUSH DS
 
+		MOV CL, 0
+		CALL CHECK_DRIVER
 
-		MOV AH, 9
-		MOV AL, 0 
-		MOV DX, OFFSET AUTHORS
-		INT 21H
+		CMP CL, 1
+		; If CL is 1, our driver is correcly installed. (Check CHECK_DRIVER PROC)
+		JE INST
 
-		MOV CX, 0
-		MOV AX, 2351h
-		INT 55h
-		;;POP DS
-
-		CMP CX, 1
-		JNE UNINS
-		
-		
-		MOV DX, OFFSET STATUSPRINT1
+		; In any other case, it is not correcly installed
+		MOV DX, OFFSET STATUSPRINT2
 		MOV AH, 9 
-		INT 21H
+		INT 21H	
 		JMP AUTH
 
-	UNINS: 
+	INST: 
 
-		MOV DX, OFFSET STATUSPRINT2
+		MOV DX, OFFSET STATUSPRINT1
 		MOV AH, 9 
 		INT 21H	
 
@@ -246,6 +284,46 @@ ERROR:
 
 	STATUS ENDP
 	
+	; This function writes on CL
+	; After the execution:
+	; CL = 0 if there isnt any driver at 55h
+	; CL = 1 if the installed driver is ours.
+	; CL = 2 if there is a driver, but it is not ours.
+	CHECK_DRIVER PROC NEAR
+
+		PUSH DI SI AX
+
+		; We have to check if there is a driver in 55h
+		; If so, we would like to know if it is our driver
+		MOV DI, ES:[ 55h*4 ]
+		MOV SI, ES:[ 55h*4 +2 ]
+		; We check if there are 0s in the interruption vector
+		CMP DI, 0 	 
+		JNE DRIVER_EXISTS
+		CMP SI, 0
+		JNE DRIVER_EXISTS
+		
+		; If we have reached this point it means there is no driver installed at all.
+		MOV CL, 0		
+		JMP END_CHECK
+
+	DRIVER_EXISTS:
+
+		MOV CL, 0
+		MOV AH, 08h
+		INT 55h
+		; If the interruption with AH = 08h changes CL from 0 to 1, then it should be our interruption.
+		CMP CL, 1
+		JE END_CHECK
+
+		; The other possible case is: there is a driver, but it isnt the one we want.
+		MOV CL, 2
+
+	END_CHECK:
+		POP AX SI DI
+		RET
+
+	CHECK_DRIVER ENDP
 
 	FINAL:	
 		; NOT SURE IF IT IS NECESSARY

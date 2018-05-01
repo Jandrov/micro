@@ -14,7 +14,7 @@ DATOS SEGMENT
 	CLEAR_SCREEN 	DB 	1BH,"[2","J$"
     STATEMENT DB "Please, write the message you want to encode: ", 13, 10, "$"
 
-    ERRORCODE DB "The driver was not installed correctly"
+    ERRORCODE DB "Our driver is not correctly installed", 13, 10 , '$'
     PRINT1 DB "The message you are encoding is: ", '$'
     PRINT2 DB "The encoded message is: ", '$'
     PRINT3 DB "The decoded message is: ", '$'
@@ -41,22 +41,21 @@ INICIO PROC
 	MOV AX, 0
 	MOV ES, AX
 
-	; We have to check if there is a driver already installed in 55h
-	MOV DI, ES:[ 55h*4 ]
-	MOV SI, ES:[ 55h*4 +2 ]
-	; We check if there are 0s in the interruption vector
-	; This fails in the first attempt
-	CMP DI, 0 	 
-	JNE DRIVER_OK
-	CMP SI, 0
-	JNE DRIVER_OK
 
+	; We have to check if our driver is correcly installed
+	MOV CL, 0
+	CALL CHECK_DRIVER
+	CMP CL, 1
+	JE DRIVER_OK
+
+
+
+ERROR:
 
 	; Printing an ERRORCODE
 	MOV DX, OFFSET ERRORCODE
 	MOV AH, 9
 	INT 21H
-
 
 	JMP JEND
 
@@ -150,7 +149,47 @@ JEND:
 	INT 21h
 INICIO ENDP
 
-; We implement the function to compute the parity bits in an automatic way
+
+; This function writes on CL
+; After the execution:
+; CL = 0 if there isnt any driver at 55h
+; CL = 1 if the installed driver is ours.
+; CL = 2 if there is a driver, but it is not ours.
+CHECK_DRIVER PROC NEAR
+
+	PUSH DI SI AX
+
+	; We have to check if there is a driver in 55h
+	; If so, we would like to know if it is our driver
+	MOV DI, ES:[ 55h*4 ]
+	MOV SI, ES:[ 55h*4 +2 ]
+	; We check if there are 0s in the interruption vector
+	CMP DI, 0 	 
+	JNE DRIVER_EXISTS
+	CMP SI, 0
+	JNE DRIVER_EXISTS
+		
+	; If we have reached this point it means there is no driver installed at all.
+	MOV CL, 0		
+	JMP END_CHECK
+
+DRIVER_EXISTS:
+
+	MOV CL, 0
+	MOV AH, 08h
+	INT 55h
+	; If the interruption with AH = 08h changes CL from 0 to 1, then it should be our interruption.
+	CMP CL, 1
+	JE END_CHECK
+
+	; The other possible case is: there is a driver, but it isnt the one we want.
+	MOV CL, 2
+
+END_CHECK:
+	POP AX SI DI
+	RET
+
+CHECK_DRIVER ENDP
 
 
 ; END OF CODE SEGMENT
