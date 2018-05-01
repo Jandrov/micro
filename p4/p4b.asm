@@ -1,7 +1,7 @@
 ;**************************************************************************
 ; MICROPROCESSOR-BASED SYSTEMS
-; LAB SESSION 2
-; FILE: labs2b.asm
+; LAB SESSION 4
+; FILE: p4b.asm
 ; AUTHORS: Emilio Cuesta Fernandez - Alejandro Sanchez Sanz
 ; COUPLE NUMBER: 8
 ; GROUP: 2351

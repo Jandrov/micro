@@ -1,7 +1,7 @@
 ;**************************************************************************
 ; MICROPROCESSOR-BASED SYSTEMS
 ; LAB SESSION 4
-; FILE: p4a.asm
+; FILE: p4c.asm
 ; AUTHORS: Emilio Cuesta Fernandez - Alejandro Sanchez Sanz
 ; COUPLE NUMBER: 8
 ; GROUP: 2351
@@ -63,13 +63,44 @@ ERROR:
 	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
 	AUTHORS DB "AUTHORS:", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 ,"GROUP 2351, TEAM 8", 13, 10,'$'	
 	
-	; Variables for Caesar Cypher
+	; Variables for Caser Cypher
 	CODE_NUMBER DB 11  	; Codification number. We are team 8, so it is 8+3=11
 	MAX_VALUE DB 126 	; Maximum ASCII value we accept (~), in decimal
 	MIN_VALUE DB 32 	; Minimum ASCII value we accept (space), in decimal
 	PREV_55h DW ?, ? 	; Variable to store the routine which was previously installed in 55h of the interrumpt vector
 
+	;RTC ROUTINE
+	RTC_ROUTINE PROC FAR
+		PUSHF
+		PUSH ES BX AX DI CX
+
+		STI
+		; Read register C 
+		MOV AL, 0Ch
+		OUT 70h, AL
+		IN AL, 71h
+		CMP FLAG_TX, 1
+		JNE RTC_ROUTINE_FIN
+		;DECREMENTAR EL CONTADOR
+		DEC CONTADOR
+		CMP CONTADOR, 0
+		JNE RTC_ROUTINE_FIN
+		;PONER EL FLAG DE ERROR A 1
+		MOV FLAG_ERROR,  1
+	RTC_ROUTINE_FIN:
+		; Send EOI to the slave PIC
+		MOV AL, 20h
+		OUT 0A0h, AL
+		; Send EOI to the master PIC
+		OUT 20h, AL
+
+		POP CX DI AX BX ES
+		POPF
+		IRET
+	RTC_ROUTINE ENDP
+
 	CAESAR PROC FAR ; INTERRUPT SERVICE ROUTINE
+		PUSHF
 		; SAVE MODIFIED REGISTERS
 		PUSH SI BX AX
 		; ROUTINE INSTRUCTIONS
@@ -141,14 +172,13 @@ ERROR:
 		; RESTORE MODIFIED REGISTERS
 	FIN:
 		POP AX BX SI
+		POPF
 		IRET
 	CAESAR ENDP
 
 	INSTALLER PROC
 		MOV AX, 0
 		MOV ES, AX
-		MOV BX, OFFSET CAESAR
-		MOV AX, CS
 		
 		; We have to check if there was a different driver already installed in that position
 		MOV CL, 0
@@ -209,8 +239,12 @@ ERROR:
 	INSTALL:
 
 		CLI
-		MOV ES:[ 55h*4 ], BX
-		MOV ES:[ 55h*4+2 ], AX
+		MOV ES:[ 55h*4 ], OFFSET CAESAR
+		MOV ES:[ 55h*4+2 ], CS
+
+		; Install RTC 
+		MOV ES:[ 70h*4 ], OFFSET RTC_ROUTINE
+		MOV ES:[ 70h*4+2 ], CS
 		STI
 		MOV DX, OFFSET INSTALLER
 		INT 27H ; TERMINATE AND STAY RESIDENT
@@ -331,6 +365,34 @@ ERROR:
 		RET
 
 	CHECK_DRIVER ENDP
+
+	RTC_CONFIG PROC FAR
+		PUSH AX
+
+		; Enable RTC on slave PIC
+		IN AL, 0A1h 		; Read IMR of PIC-1 (Slave)
+		AND AL, 11111110b 
+		OUT 0A1h, AL 		; Write IMR of PIC-1 (Slave)
+
+		MOV AL, 0Ah
+		; Set the frequency
+		OUT 70h, AL 		; Enable 0Ah register
+		MOV AL, 00101110b 	; DV=010b, RS=1110b (14 == 4 Hz)
+		OUT 71h, AL 		; Write 0Ah register
+		; Active interrupt
+		MOV AL, 0Bh
+		OUT 70h, AL 		; Enable 0Bh register
+		IN AL, 71h 			; Read the 0Bh register
+		MOV AH, AL
+		OR AH, 01000000b 	; Set the PIE bit
+		MOV AL, 0Bh
+		OUT 70h, AL 		; Enable the 0Bh register
+		MOV AL, AH
+		OUT 71h, AL 		; Write the 0Bh register
+		POP AX
+		RET
+	RTC_CONFIG ENDP
+
 
 	FINAL:	
 		; END THE PROGRAM
