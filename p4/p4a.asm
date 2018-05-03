@@ -93,8 +93,7 @@ ERROR:
 		JNE RTC_ROUTINE_FIN
 		; Decrease the counter which is used to simulate a 1 Hz frequency
 		DEC COUNTER
-		CMP COUNTER, 0
-		JNE RTC_ROUTINE_FIN
+		JNZ RTC_ROUTINE_FIN
 		; Restart the counter
 		MOV COUNTER, 2
 		; Print character by character until finding '$'
@@ -114,6 +113,7 @@ ERROR:
 		MOV SI, 0
 		MOV INDEX, SI
 		MOV FLAG_PRINT, 0
+		MOV CX, 17h
 
 	RTC_ROUTINE_FIN:
 		; Send EOI to the slave PIC

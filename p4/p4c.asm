@@ -40,14 +40,8 @@ PILA ENDS
 ; CODE SEGMENT DEFINITION
 CODE SEGMENT
 ASSUME CS: CODE, DS: DATOS, SS: PILA
-	; First assembly instruction must be after the 256 bytes of PSP, so this is 
-	; necessary to generate a .COM file
-	ORG 256
-
 
 ; BEGINNING OF THE MAIN PROCEDURE
-
-
 
 INICIO PROC
 	; INITIALIZE THE SEGMENT REGISTERS
@@ -244,9 +238,13 @@ INT_CALL:
 	; Active wait. We wait until the RTC interruptions end up printing the encoded/decoded string
 
 WAITING:
+	PUSH DS
+	; Load the string again to DS:DX because RTC prints from it
 	MOV DX, OFFSET MESSAGE[2]
 	MOV BX, SEG MESSAGE
 	MOV DS, BX
+
+	POP DS
 	
 	MOV AH, 07h
 	INT 55h
