@@ -110,10 +110,8 @@ ERROR:
 		JMP RTC_ROUTINE_FIN
 
 	PRINT_END:
-		MOV SI, 0
-		MOV INDEX, SI
+		MOV INDEX, 0
 		MOV FLAG_PRINT, 0
-		MOV CX, 17h
 
 	RTC_ROUTINE_FIN:
 		; Send EOI to the slave PIC
@@ -320,12 +318,13 @@ ERROR:
 		;;;;;;;;;;;(OR THE DRIVER PREVIOUSLY INSTALLED)
 
 		CLI
-		MOV CX, 0
-		MOV DS:[ 55h*4 ], CX   			; CX = 0, DS = 0
-		MOV DS:[ 55h*4+2 ], CX
+		
 		; RTC
 		MOV DS:[ 70h*4 ], CX
 		MOV DS:[ 70h*4+2 ], CX
+		MOV DS:[ 55h*4 ], CX   			; CX = 0, DS = 0
+		MOV DS:[ 55h*4+2 ], CX
+		
 
 		; MOV CX, PREV_55h
 		; MOV DS:[ 70h*4 ], CX

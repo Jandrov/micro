@@ -68,7 +68,7 @@ ERROR:
 DRIVER_OK:
 	
 	; We set up all the RTC configuration in this function
-	CALL RTC_CONFIG
+	
 
 	; CLEARS THE SCREEN
 	MOV AH, 9	
@@ -131,7 +131,7 @@ SCANF:
 
 	; In this case the QUIT command has been written. The program ends
 
-	JMP JEND
+	JMP DISABLE
 
 COD_CMP:
 
@@ -237,23 +237,38 @@ INT_CALL:
 
 	; Active wait. We wait until the RTC interruptions end up printing the encoded/decoded string
 
+PUSH DS
 WAITING:
-	PUSH DS
+	
 	; Load the string again to DS:DX because RTC prints from it
 	MOV DX, OFFSET MESSAGE[2]
 	MOV BX, SEG MESSAGE
 	MOV DS, BX
 
-	POP DS
-	
+	CALL RTC_CONFIG
+
 	MOV AH, 07h
 	INT 55h
 	CMP AH, 1
 	JE WAITING
 
+	POP DS
+
+	; Printing a line jump 
+	MOV AH, 9h
+	MOV DX, OFFSET LINEJUMP
+	INT 21h
+
 	; After the interruption, the user will be asked for another string once and again until it writes the QUIT command 
 	JMP KEYBOARD_LOOP
 	
+
+DISABLE:
+	; Disable RTC on slave PIC
+	IN AL, 0A1h 		; Read IMR of PIC-1 (Slave)
+	OR AL, 00000001b 
+	OUT 0A1h, AL 		; Write IMR of PIC-1 (Slave)
+
 	; PROGRAM END
 JEND:
     MOV AX, 4C00h
