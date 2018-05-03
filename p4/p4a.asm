@@ -72,7 +72,6 @@ ERROR:
 	CODE_NUMBER DB 11  	; Codification number. We are team 8, so it is 8+3=11
 	MAX_VALUE DB 126 	; Maximum ASCII value we accept (~), in decimal
 	MIN_VALUE DB 32 	; Minimum ASCII value we accept (space), in decimal
-	;PREV_55h DW ?, ? 	; Variable to store the routine which was previously installed in 55h of the interrumpt vector
 
 	; Variables for RTC
 	FLAG_PRINT DB 0		; 0 -> No print character by character. 1 -> Print character by character
@@ -158,38 +157,40 @@ ERROR:
 		JMP FIN 
 
 	ENCRYPT:
-		MOV AL, DS:[BX][SI]
-		CMP AL, '$'
+		MOV AL, DS:[BX][SI] 	; Read the character
+		CMP AL, '$' 			; If it is '$', encryption has ended
 		JE PRINT
-		ADD AL, CODE_NUMBER
+		ADD AL, CODE_NUMBER 	; We use a right shift of 11, so encrypt is adding 11
 		MOV AH, AL
 		SUB AH, MAX_VALUE
-		JG OVERFLOW
+		JG OVERFLOW 			; Check if there is an overflow of the character's space we have decided to use (32-126)
 	BACK_ENC:
-		MOV DS:[BX][SI], AL
-		INC SI
+		MOV DS:[BX][SI], AL 	; Write directly in memory the encrypted character
+		INC SI 					; Increase the index
 		JMP ENCRYPT
 
 	DECRYPT:
-		MOV AL, DS:[BX][SI]
-		CMP AL, '$'
+		MOV AL, DS:[BX][SI] 	; Read the character
+		CMP AL, '$' 			; If it is '$', decryption has ended
 		JE PRINT
-		SUB AL, CODE_NUMBER
+		SUB AL, CODE_NUMBER 	; We use a right shift of 11, so decrypt is subtracting 11
 		MOV AH, AL
 		SUB AH, MIN_VALUE
-		JL UNDERFLOW
+		JL UNDERFLOW 			; Check if there is an underflow of the character's space we have decided to use (32-126)
 	BACK_DEC:
-		MOV DS:[BX][SI], AL
-		INC SI
+		MOV DS:[BX][SI], AL 	; Write directly in memory the encrypted character
+		INC SI 					; Increase the index
 		JMP DECRYPT
 
-	OVERFLOW:
+	OVERFLOW: 					; If there is an overflow, we have to calculate the correct AL's value using MIN_VALUE
+								; For instance: if AL is 128 after encryption, it should be 33 eventually
 		ADD AH, MIN_VALUE
 		DEC AH
 		MOV AL, AH
 		JMP BACK_ENC
 
-	UNDERFLOW:
+	UNDERFLOW: 					; If there is an underflow, we have to calculate the correct AL's value using MAX_VALUE
+								; For instance: if AL is 30 after encryption, it should be 125 eventually
 		ADD AH, MAX_VALUE
 		INC AH
 		MOV AL, AH
@@ -227,7 +228,10 @@ ERROR:
 		MOV AH, 09h
 		MOV DX, OFFSET COINCIDENCEPRINT
 		INT 21h
+		JMP ERROREND
 		
+	POPEND:
+		POP AX DX BX
 	ERROREND:
 		STI
 		RET 
@@ -249,24 +253,14 @@ ERROR:
 		; Check out if the MESSAGE'S lenght is not null
 		MOV BL, ANSWER[1]
 		CMP BL, 0
-		JE ERROREND
-
-		POP AX DX BX
+		JE POPEND
 
 		; Answer check
 		CMP ANSWER[2], 'y'
-		;JE STORE_PREV
 		JE INSTALL
 
-		JMP ERROREND
-
-	; STORE_PREV:
-	; 	CLI
-	; 	MOV CX, ES:[ 55h*4 ]
-	; 	MOV PREV_55h, CX
-	; 	MOV CX, ES:[ 55h*4+2 ]
-	; 	MOV PREV_55h+2, CX
-	; 	STI
+		; In case the user doesn't type 'y', the driver is not installed and the program finishes
+		JMP POPEND
 
 	INSTALL:
 
@@ -281,8 +275,7 @@ ERROR:
 
 		STI
 		MOV DX, OFFSET INSTALLER
-		INT 27H ; TERMINATE AND STAY RESIDENT
-		; PSP, VARIABLES, CAESAR ROUTINE.
+		INT 27h ; End and stay resident
 	INSTALLER ENDP
 
 
@@ -315,8 +308,6 @@ ERROR:
 		
 		; SET VECTOR OF INTERRUPT 55h AND 70h TO ZEROS 
 
-		;;;;;;;;;;;(OR THE DRIVER PREVIOUSLY INSTALLED)
-
 		CLI
 		
 		; RTC
@@ -324,16 +315,7 @@ ERROR:
 		MOV DS:[ 70h*4+2 ], CX
 		MOV DS:[ 55h*4 ], CX   			; CX = 0, DS = 0
 		MOV DS:[ 55h*4+2 ], CX
-		
 
-		; MOV CX, PREV_55h
-		; MOV DS:[ 70h*4 ], CX
-		; MOV CX, PREV_55h+2
-		; MOV DS:[ 70h*4+2 ], CX
-		; MOV CX, PREV_55h
-		; MOV DS:[ 55h*4 ], CX
-		; MOV CX, PREV_55h+2
-		; MOV DS:[ 55h*4+2 ], CX
 		STI
 
 	UNSEND:

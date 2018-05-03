@@ -12,7 +12,7 @@
 DATOS SEGMENT
 	; Functionality variables
 	COD_DEC DB 0  	; It is 0 if we want to ENCRYPT the strings we type
-			   		; Its value is 1 if we want to DECRYPT the strings we type
+			   		; It is 1 if we want to DECRYPT the strings we type
     MESSAGE DB 100 dup (?)
 
 	; Variables to print
@@ -65,10 +65,14 @@ ERROR:
 
 	JMP JEND
 
+NO_CHAR:
+	; Printing a line jump 
+	MOV AH, 9h
+	MOV DX, OFFSET LINEJUMP
+	INT 21h
+	JMP KEYBOARD_LOOP
+
 DRIVER_OK:
-	
-	; We set up all the RTC configuration in this function
-	
 
 	; CLEARS THE SCREEN
 	MOV AH, 9	
@@ -111,7 +115,7 @@ SCANF:
 	MOV BH, 0
 	MOV BL, MESSAGE[1]
 	CMP BL, 0
-	JE KEYBOARD_LOOP
+	JE NO_CHAR
 	 
 
 	; In order to print the message correctly, we have to write the $ right after the last character
@@ -129,7 +133,7 @@ SCANF:
 	CMP MESSAGE[5], 't'
 	JNE COD_CMP
 
-	; In this case the QUIT command has been written. The program ends
+	; In this case the 'quit' command has been written. The program ends
 
 	JMP DISABLE
 
@@ -143,7 +147,7 @@ COD_CMP:
 	JNE DEC_CMP
 
 
-	; In this case the COD command has been written. We change the mode-flag
+	; In this case the 'cod' command has been written. We change the mode-flag
 
 	MOV COD_DEC, 0
 
@@ -163,7 +167,7 @@ DEC_CMP:
 	CMP MESSAGE[4], 'c'
 	JNE STRING_MODE
 
-	; In this case the DEC command has been written. We change the mode-flag
+	; In this case the 'dec' command has been written. We change the mode-flag
 
 	MOV COD_DEC, 1
 
@@ -245,11 +249,13 @@ WAITING:
 	MOV BX, SEG MESSAGE
 	MOV DS, BX
 
+	; We set up all the RTC configuration in this function
 	CALL RTC_CONFIG
 
+	; We use the extra functionality of INT55h, which stores the FLAG_PRINT in AH if it is generated with 07h in AH
 	MOV AH, 07h
 	INT 55h
-	CMP AH, 1
+	CMP AH, 1 	; Flag = 1 -> RTC is printing so we must wait 
 	JE WAITING
 
 	POP DS
@@ -262,6 +268,7 @@ WAITING:
 	; After the interruption, the user will be asked for another string once and again until it writes the QUIT command 
 	JMP KEYBOARD_LOOP
 	
+
 
 DISABLE:
 	; Disable RTC on slave PIC
