@@ -8,7 +8,7 @@
 ##################################################################
 
 
-all: p4a.com p4b.exe #p4c.exe
+all: p4a.com p4b.exe p4c.exe
 
 p4a.com: p4a.obj
     tlink /v /t p4a

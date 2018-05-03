@@ -8,404 +8,328 @@
 ;**************************************************************************
 
 
+; DATA SEGMENT DEFINITION
+DATOS SEGMENT
+	; Functionality variables
+	COD_DEC DB 0  ; It is 0 if we want to ENCODE.
+			   ; Its value is 1 if we wanto to DECRYPT
+    MESSAGE DB 100 dup (?)
+
+	; Variables to print
+	CLEAR_SCREEN 	DB 	1BH,"[2","J$"
+	ERRORCODE DB  "The driver you are trying to use is not correctly installed.", 13, 10,"Please, try running P4C.COM /I before", 13, 10, '$'
+	MODESTRING DB "The current mode is: " , '$'
+	CODSTRING DB "COD", 13, 10 , '$'
+	DECSTRING DB "DEC", 13, 10 , '$'
+	STATEMENT DB  "Please, write a message or a command: ", 13, 10, '$'
+	PRINTMESSAGE DB "The message you introduced is: ", '$'
+	CODMESSAGE DB "The encoded message is:", 13, 10, '$'
+	DECMESSAGE DB "The decoded message is:", 13, 10, '$'
+    
+    LINEJUMP DB 13,10, '$'
+
+DATOS ENDS
+;**************************************************************************
+; STACK SEGMENT DEFINITION
+PILA SEGMENT STACK "STACK"
+	DB 40h DUP (0) ; initialization example, 64 bytes set to 0
+PILA ENDS
+
 
 ;**************************************************************************
 ; CODE SEGMENT DEFINITION
 CODE SEGMENT
-	ASSUME CS: CODE
+ASSUME CS: CODE, DS: DATOS, SS: PILA
 	; First assembly instruction must be after the 256 bytes of PSP, so this is 
 	; necessary to generate a .COM file
 	ORG 256
 
 
 ; BEGINNING OF THE MAIN PROCEDURE
-INICIO: 
-	; Check input parameters
-	MOV CL, DS:[80h]   	; Load the size of the parameters in the command line
-	; No parameters
-	CMP CL, 0
-	JNE NEXT
-	CALL STATUS
-	JMP FINAL
 
-NEXT:
-	; If there is a parameter, it must be 3 bytes long (space + / + I or space + / + U)
-	CMP CL, 3
-	JNE ERROR
-	MOV CX, DS:[82h]
-	CMP CL, '/'
-	JNE ERROR
-	; /I as parameter
-	CMP CH, 'I'
-	JE AUXINSJUMP
-	; /U as parameter
-	CMP CH, 'U'
-	JNE ERROR
-	CALL UNINSTALLER
-	JMP FINAL
 
-AUXINSJUMP:
 
-	CALL INSTALLER
-	JMP FINAL
+INICIO PROC
+	; INITIALIZE THE SEGMENT REGISTERS
+	MOV AX, DATOS
+	MOV DS, AX
+	MOV AX, 0
+	MOV ES, AX
 
-	; Reaching here means input parameters are wrong
+
+	; We have to check if our driver is correcly installed
+	MOV AH, 0
+	CALL CHECK_DRIVER
+	CMP AH, 1
+	JE DRIVER_OK
+	
+
 ERROR:
-	; Shows this message when there has been an error introducing the parameters
-	JMP FINAL
-
-	; Print variables for Installation/Uninstallation
-	COINCIDENCEPRINT DB "The driver you are trying to install is already installed", 13, 10, '$'
-	CONFLICT DB "There is another driver at 55h. Do you want to overwrite it? (write y/n)", 13, 10, '$'
-	ANSWER DB 3 dup(0)
-	; Print variables for Status Case
-	STATUSPRINT1 DB "The driver is currently INSTALLED", 13, 10, '$'
-	STATUSPRINT2 DB "The driver is currently UNINSTALLED", 13, 10, '$'
-	AUTHORS DB "AUTHORS:", 13, 10, "Emilio Cuesta", 13, 10, "Alejandro Sanchez", 13, 10 ,"GROUP 2351, TEAM 8", 13, 10,'$'	
 	
-	; Variables for Caser Cypher
-	CODE_NUMBER DB 11  	; Codification number. We are team 8, so it is 8+3=11
-	MAX_VALUE DB 126 	; Maximum ASCII value we accept (~), in decimal
-	MIN_VALUE DB 32 	; Minimum ASCII value we accept (space), in decimal
-	PREV_55h DW ?, ? 	; Variable to store the routine which was previously installed in 55h of the interrumpt vector
+	; If the driver isnt well installed, we print an advise and the program finishes
+	; Printing an ERRORCODE
+	MOV DX, OFFSET ERRORCODE
+	MOV AH, 9
+	INT 21H
 
-	;RTC ROUTINE
-	RTC_ROUTINE PROC FAR
-		PUSHF
-		PUSH ES BX AX DI CX
+	JMP JEND
 
-		STI
-		; Read register C 
-		MOV AL, 0Ch
-		OUT 70h, AL
-		IN AL, 71h
-		CMP FLAG_TX, 1
-		JNE RTC_ROUTINE_FIN
-		;DECREMENTAR EL CONTADOR
-		DEC CONTADOR
-		CMP CONTADOR, 0
-		JNE RTC_ROUTINE_FIN
-		;PONER EL FLAG DE ERROR A 1
-		MOV FLAG_ERROR,  1
-	RTC_ROUTINE_FIN:
-		; Send EOI to the slave PIC
-		MOV AL, 20h
-		OUT 0A0h, AL
-		; Send EOI to the master PIC
-		OUT 20h, AL
+DRIVER_OK:
+	
+	; We set up all the RTC configuration in this function
+	CALL RTC_CONFIG
 
-		POP CX DI AX BX ES
-		POPF
-		IRET
-	RTC_ROUTINE ENDP
-
-	CAESAR PROC FAR ; INTERRUPT SERVICE ROUTINE
-		PUSHF
-		; SAVE MODIFIED REGISTERS
-		PUSH SI BX AX
-		; ROUTINE INSTRUCTIONS
-		; We know the string is pointed by DS:DX
-		MOV SI, 0 		; Initialize the index
-		MOV BX, DX
-		; We have to check AH
+	; CLEARS THE SCREEN
+	MOV AH,9	
+	MOV DX, OFFSET CLEAR_SCREEN
+	INT 21H
 
 
-		CMP AH, 12h 	; Encrypt and print
-		JE ENCRYPT
-		CMP AH, 13h 	; Decrypt and print
-		JE DECRYPT
-		CMP AH, 08h     ; This is an extra feature that will be used to tell us if the interruption is installed or not
-		JE DRIVER_PRESENCE
-		JMP FIN
+KEYBOARD_LOOP:
 
-	DRIVER_PRESENCE:
+	; Printing the current mode
+	MOV DX, OFFSET MODESTRING
+	INT 21H
 
-		MOV CL, 1		; If the interruption is installed, CL will be modified and store a one.
-						; We can assume the person who uses this functionality knows how it works and 
-						; wont have a 1 in CL before the call.
-
-		JMP FIN 
-
-	ENCRYPT:
-		MOV AL, DS:[BX][SI]
-		CMP AL, '$'
-		JE PRINT
-		ADD AL, CODE_NUMBER
-		MOV AH, AL
-		SUB AH, MAX_VALUE
-		JG OVERFLOW
-	BACK_ENC:
-		MOV DS:[BX][SI], AL
-		INC SI
-		JMP ENCRYPT
-
-	DECRYPT:
-		MOV AL, DS:[BX][SI]
-		CMP AL, '$'
-		JE PRINT
-		SUB AL, CODE_NUMBER
-		MOV AH, AL
-		SUB AH, MIN_VALUE
-		JL UNDERFLOW
-	BACK_DEC:
-		MOV DS:[BX][SI], AL
-		INC SI
-		JMP DECRYPT
-
-	OVERFLOW:
-		ADD AH, MIN_VALUE
-		DEC AH
-		MOV AL, AH
-		JMP BACK_ENC
-
-	UNDERFLOW:
-		ADD AH, MAX_VALUE
-		INC AH
-		MOV AL, AH
-		JMP BACK_DEC
-
-	PRINT:
-		
-		MOV AH, 09h
-		INT 21h 		; Print the string after processing it. Offset is already in DX
-		
-		; RESTORE MODIFIED REGISTERS
-	FIN:
-		POP AX BX SI
-		POPF
-		IRET
-	CAESAR ENDP
-
-	INSTALLER PROC
-		MOV AX, 0
-		MOV ES, AX
-		
-		; We have to check if there was a different driver already installed in that position
-		MOV CL, 0
-		CALL CHECK_DRIVER
-
-		; If there are no drivers, we dont have any problems for the installation
-		CMP CL, 0
-		JE INSTALL
-
-		; If there is a different driver, we ask the user what to do with it
-		CMP CL, 2
-		JE OTHER_DRIVER
-
-		; In any other case, we assume the installed driver is ours, therefore there is no need to reinstall it
-		MOV AH, 09h
-		MOV DX, OFFSET COINCIDENCEPRINT
-		INT 21H
-		
-	ERROREND:
-		STI
-		RET 
-
-	OTHER_DRIVER:
-
-		PUSH AX BX DX
-
-		MOV DX, OFFSET CONFLICT
-		MOV AH, 9 
-		INT 21H	
-
-		; Reading answer from keyboard
-		MOV AH,0AH			
-		MOV DX, OFFSET ANSWER
-		MOV ANSWER[0], 2		
-		INT 21H
-
-		; Check out if the MESSAGE'S lenght is not null
-		MOV BL, ANSWER[1]
-		CMP BL, 0
-		JE ERROREND
-
-		POP DX BX AX
-
-		; Answer check
-		CMP ANSWER[2], 'y'
-		JE STORE_PREV
-
-		JMP ERROREND
-
-	STORE_PREV:
-		CLI
-		MOV CX, ES:[ 55h*4 ]
-		MOV PREV_55h, CX
-		MOV CX, ES:[ 55h*4+2 ]
-		MOV PREV_55h+2, CX
-		STI
-
-	INSTALL:
-
-		CLI
-		MOV ES:[ 55h*4 ], OFFSET CAESAR
-		MOV ES:[ 55h*4+2 ], CS
-
-		; Install RTC 
-		MOV ES:[ 70h*4 ], OFFSET RTC_ROUTINE
-		MOV ES:[ 70h*4+2 ], CS
-
-		CALL RTC_CONFIG
-
-		STI
-		MOV DX, OFFSET INSTALLER
-		INT 27H ; TERMINATE AND STAY RESIDENT
-		; PSP, VARIABLES, CAESAR ROUTINE.
-	INSTALLER ENDP
-
-
-	UNINSTALLER PROC ; UNINSTALL CAESAR OF INT 55H
-		PUSH AX BX CX DS ES DI SI
-		MOV CX, 0
-		MOV DS, CX 						; SEGMENT OF INTERRUPT VECTORS
+	CMP COD_DEC, 0
+	JNE DEC_PRINT
  
-		MOV CL, 0
-		CALL CHECK_DRIVER
+	MOV DX, OFFSET CODSTRING
+	INT 21H
 
-		; If there are no drivers to unistall, we dont do anything
-		CMP CL, 0 	 
-		JE UNSEND
-		; If there is a different driver, we dont unistall it.
-		; If we needed to, we can call INSTALL and we will be offered to overwrite the previous installation
-		CMP CL, 2
-		JE UNSEND
+	JMP SCANF
 
-		; Otherwise, our driver is installed and we want to uninstall it
+DEC_PRINT:
 
-	UNINSTALL:
-		MOV SI, DS:[ 55h*4+2 ] 			; READ CAESAR SEGMENT	
-		MOV ES, SI
-		MOV BX, ES:[ 2Ch ] 				; READ SEGMENT OF ENVIRONMENT FROM CAESAR’S PSP. 
-		MOV AH, 49h 
-		INT 21h 						; RELEASE CAESAR SEGMENT (ES)
-		MOV ES, BX
-		INT 21h 						; RELEASE SEGMENT OF ENVIRONMENT VARIABLES OF CAESAR
-		
-		; SET VECTOR OF INTERRUPT 55H TO THE DRIVER PREVIOUSLY INSTALLED
-		CLI
-		MOV CX, PREV_55h
-		MOV DS:[ 55h*4 ], CX
-		MOV CX, PREV_55h+2
-		MOV DS:[ 55h*4+2 ], CX
-		; RTC
-		MOV CX, PREV_55h
-		MOV DS:[ 70h*4 ], CX
-		MOV CX, PREV_55h+2
-		MOV DS:[ 70h*4+2 ], CX
-		STI
+	MOV DX, OFFSET DECSTRING
+	INT 21H
 
-	UNSEND:
+SCANF: 
 
-		POP SI DI ES DS CX BX AX
-		RET
-	UNINSTALLER ENDP
+	; PRINTS THE MESSAGE REQUEST
+	MOV DX, OFFSET STATEMENT		
+	INT 21H
+
+	; STORES THE MESSAGE IN MEMORY
+	MOV AH,0AH			
+	MOV DX, OFFSET MESSAGE
+	MOV MESSAGE[0], 90		
+	INT 21H
+
+	; Check out if the MESSAGE'S lenght is not null
+	MOV BH, 0
+	MOV BL, MESSAGE[1]
+	CMP BL, 0
+	JE KEYBOARD_LOOP
+	 
+
+	; In order to print the message correctly, we have to write the $ right after the last character
+	MOV MESSAGE[BX+2], '$'
+
+	; First of all, we check out if the given string is one of our commands.s
+
+	; Quit comparison
+	CMP MESSAGE[2], 'Q'
+	JNE COD_CMP
+	CMP MESSAGE[3], 'U'
+	JNE COD_CMP
+	CMP MESSAGE[4], 'I'
+	JNE COD_CMP
+	CMP MESSAGE[5], 'T'
+	JNE COD_CMP
+
+	; In this case the QUIT command has been written. The program ends
+
+	JMP JEND
+
+COD_CMP:
+
+	CMP MESSAGE[2], 'C'
+	JNE DEC_CMP
+	CMP MESSAGE[3], 'O'
+	JNE DEC_CMP
+	CMP MESSAGE[4], 'D'
+	JNE DEC_CMP
 
 
-	STATUS PROC
-		MOV CL, 0
-		CALL CHECK_DRIVER
+	; In this case the COD command has been written. We change the mode-flag
 
-		CMP CL, 1
-		; If CL is 1, our driver is correcly installed. (Check CHECK_DRIVER PROC)
-		JE INST
+	MOV COD_DEC, 0
 
-		; In any other case, it is not correcly installed
-		MOV DX, OFFSET STATUSPRINT2
-		MOV AH, 9 
-		INT 21H	
-		JMP AUTH
+	; Printing a line jump 
+	MOV AH,9	
+	MOV DX, OFFSET LINEJUMP
+	INT 21H
 
-	INST: 
+	JMP KEYBOARD_LOOP
 
-		MOV DX, OFFSET STATUSPRINT1
-		MOV AH, 9 
-		INT 21H	
-
-	AUTH: 
-
-		MOV DX, OFFSET AUTHORS
-		INT 21H
-		RET
-
-	STATUS ENDP
+DEC_CMP: 
 	
-	; This function writes on CL
-	; After the execution:
-	; CL = 0 if there isnt any driver at 55h
-	; CL = 1 if the installed driver is ours.
-	; CL = 2 if there is a driver, but it is not ours.
-	CHECK_DRIVER PROC NEAR
+	CMP MESSAGE[2], 'D'
+	JNE STRING_MODE
+	CMP MESSAGE[3], 'E'
+	JNE STRING_MODE
+	CMP MESSAGE[4], 'C'
+	JNE STRING_MODE
 
-		PUSH DI SI AX ES
+	; In this case the DEC command has been written. We change the mode-flag
 
-		MOV AX, 0
-		MOV ES, AX
+	MOV COD_DEC, 1
 
-		; We have to check if there is a driver in 55h
-		; If so, we would like to know if it is our driver
-		MOV DI, ES:[ 55h*4 ]
-		MOV SI, ES:[ 55h*4 +2 ]
-		; We check if there are 0s in the interruption vector
-		CMP DI, 0 	 
-		JNE DRIVER_EXISTS
-		CMP SI, 0
-		JNE DRIVER_EXISTS
+	; Printing a line jump 
+	SMOV AH,9	
+	MOV DX, OFFSET LINEJUMP
+	INT 21H
+
+	JMP KEYBOARD_LOOP
+
+STRING_MODE:
+
+	; PRINTS THE MESSAGE WRITTEN BY THE USER
+	MOV AH,9	
+	MOV DX, OFFSET PRINTMESSAGE
+	INT 21H
+	
+	MOV DX, OFFSET MESSAGE[2]
+	INT 21H
+
+	; Printing a line jump 
+	MOV DX, OFFSET LINEJUMP
+	INT 21H
+
+	
+	CMP COD_DEC, 0
+	JNE DEC_MODE
+
+	; CASE 1: ENCRYPTION
+
+	MOV DX, OFFSET CODMESSAGE
+	INT 21H
+
+	; 12h => ENCRYPTION
+	MOV AH, 12h
+	JMP INT_CALL
+
+
+	; CASE 2: DECRYPTION
+
+DEC_MODE:
+
+	MOV DX, OFFSET DECMESSAGE
+	INT 21H
+
+	; 13h => DECRYPTION
+	MOV AH, 13h
+
+INT_CALL:
+
+	; We push DS in order to keep it: We might need it later
+	PUSH DS
+
+	; We use message[2] because the first two bytes of the read message are the maximum size and the real size.
+	; We dont want to codify them
+	MOV DX, OFFSET MESSAGE[2]
+	MOV BX, SEG MESSAGE
+	MOV DS, BX
+	
+	; Calling of the interruption
+	INT 55h
+
+	; Restoring DS
+	POP DS
+
+	; Printing a line jump 
+	MOV AH, 9h
+	MOV DX, OFFSET LINEJUMP
+	INT 21H
+
+
+	; Active wait. We wait until the RTC interruptions end up printing the encoded/decoded string
+
+WAITING:
+	
+	MOV AH, 07h
+	INT 55h
+	CMP AH, 1
+	JE WAITING
+
+	; After the interruption, the user will be asked for another string once and again until it writes the QUIT command 
+	JMP KEYBOARD_LOOP
+	
+	; PROGRAM END
+JEND:
+    MOV AX, 4C00h
+	INT 21h
+INICIO ENDP
+
+
+; This function writes on CL
+; After the execution:
+; CL = 0 if there isnt any driver at 55h
+; CL = 1 if the installed driver is ours.
+; CL = 2 if there is a driver, but it is not ours.
+CHECK_DRIVER PROC NEAR
+
+	PUSH DI SI AX
+
+	; We have to check if there is a driver in 55h
+	; If so, we would like to know if it is our driver
+	MOV DI, ES:[ 55h*4 ]
+	MOV SI, ES:[ 55h*4 +2 ]
+	; We check if there are 0s in the interruption vector
+	CMP DI, 0 	 
+	JNE DRIVER_EXISTS
+	CMP SI, 0
+	JNE DRIVER_EXISTS
 		
-		; If we have reached this point it means there is no driver installed at all.
-		MOV CL, 0		
-		JMP END_CHECK
+	; If we have reached this point it means there is no driver installed at all.
+	MOV AH, 0		
+	JMP END_CHECK
 
-	DRIVER_EXISTS:
+DRIVER_EXISTS:
 
-		MOV CL, 0
-		MOV AH, 08h
-		INT 55h
-		; If the interruption with AH = 08h changes CL from 0 to 1, then it should be our interruption.
-		CMP CL, 1
-		JE END_CHECK
+	MOV AH, 08h
+	INT 55h
+	; If the interruption with AH = 08h changes CL from 0 to 1, then it should be our interruption.
+	CMP AH, 1
+	JE END_CHECK
 
-		; The other possible case is: there is a driver, but it isnt the one we want.
-		MOV CL, 2
+	; The other possible case is: there is a driver, but it isnt the one we want.
+	MOV AH, 2
 
-	END_CHECK:
-		POP ES AX SI DI
-		RET
+END_CHECK:
+	POP AX SI DI
+	RET
 
-	CHECK_DRIVER ENDP
+CHECK_DRIVER ENDP
 
-	RTC_CONFIG PROC FAR
-		PUSH AX
+RTC_CONFIG PROC NEAR
+	PUSH AX
 
-		; Enable RTC on slave PIC
-		IN AL, 0A1h 		; Read IMR of PIC-1 (Slave)
-		AND AL, 11111110b 
-		OUT 0A1h, AL 		; Write IMR of PIC-1 (Slave)
+	; Enable RTC on slave PIC
+	IN AL, 0A1h 		; Read IMR of PIC-1 (Slave)
+	AND AL, 11111110b 
+	OUT 0A1h, AL 		; Write IMR of PIC-1 (Slave)
 
-		MOV AL, 0Ah
-		; Set the frequency
-		OUT 70h, AL 		; Enable 0Ah register
-		MOV AL, 00101110b 	; DV=010b, RS=1110b (14 == 4 Hz)
-		OUT 71h, AL 		; Write 0Ah register
-		; Active interrupt
-		MOV AL, 0Bh
-		OUT 70h, AL 		; Enable 0Bh register
-		IN AL, 71h 			; Read the 0Bh register
-		MOV AH, AL
-		OR AH, 01000000b 	; Set the PIE bit
-		MOV AL, 0Bh
-		OUT 70h, AL 		; Enable the 0Bh register
-		MOV AL, AH
-		OUT 71h, AL 		; Write the 0Bh register
-		POP AX
-		RET
-	RTC_CONFIG ENDP
+	MOV AL, 0Ah
+	; Set the frequency
+	OUT 70h, AL 		; Enable 0Ah register
+	MOV AL, 00101111b 	; DV=010b, RS=1110b (14 == 4 Hz)
+	OUT 71h, AL 		; Write 0Ah register
+	; Active interrupt
+	MOV AL, 0Bh
+	OUT 70h, AL 		; Enable 0Bh register
+	IN AL, 71h 			; Read the 0Bh register
+	MOV AH, AL
+	OR AH, 01000000b 	; Set the PIE bit
+	MOV AL, 0Bh
+	OUT 70h, AL 		; Enable the 0Bh register
+	MOV AL, AH
+	OUT 71h, AL 		; Write the 0Bh register
+	POP AX
+	RET
+RTC_CONFIG ENDP
 
-
-	FINAL:	
-		; END THE PROGRAM
-		MOV AX, 4C00h
-		INT 21h
 
 ; END OF CODE SEGMENT
 CODE ENDS
