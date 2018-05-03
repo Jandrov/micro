@@ -11,22 +11,22 @@
 ; DATA SEGMENT DEFINITION
 DATOS SEGMENT
 	; Functionality variables
-	COD_DEC DB 0  ; It is 0 if we want to ENCODE.
-			   ; Its value is 1 if we wanto to DECRYPT
+	COD_DEC DB 0  	; It is 0 if we want to ENCRYPT the strings we type
+			   		; Its value is 1 if we want to DECRYPT the strings we type
     MESSAGE DB 100 dup (?)
 
 	; Variables to print
-	CLEAR_SCREEN 	DB 	1BH,"[2","J$"
-	ERRORCODE DB  "The driver you are trying to use is not correctly installed.", 13, 10,"Please, try running P4C.COM /I before", 13, 10, '$'
+	CLEAR_SCREEN 	DB 	1BH, "[2","J$"
+	ERRORCODE DB  "The driver you are trying to use is not correctly installed.", 13, 10, "Please, try running P4A.COM /I before", 13, 10, '$'
 	MODESTRING DB "The current mode is: " , '$'
 	CODSTRING DB "COD", 13, 10 , '$'
 	DECSTRING DB "DEC", 13, 10 , '$'
 	STATEMENT DB  "Please, write a message or a command: ", 13, 10, '$'
 	PRINTMESSAGE DB "The message you introduced is: ", '$'
-	CODMESSAGE DB "The encoded message is:", 13, 10, '$'
-	DECMESSAGE DB "The decoded message is:", 13, 10, '$'
+	CODMESSAGE DB "The encoded message is: ", '$'
+	DECMESSAGE DB "The decoded message is: ", '$'
     
-    LINEJUMP DB 13,10, '$'
+    LINEJUMP DB 13, 10, '$'
 
 DATOS ENDS
 ;**************************************************************************
@@ -53,9 +53,6 @@ INICIO PROC
 	; INITIALIZE THE SEGMENT REGISTERS
 	MOV AX, DATOS
 	MOV DS, AX
-	MOV AX, 0
-	MOV ES, AX
-
 
 	; We have to check if our driver is correcly installed
 	MOV AH, 0
@@ -70,7 +67,7 @@ ERROR:
 	; Printing an ERRORCODE
 	MOV DX, OFFSET ERRORCODE
 	MOV AH, 9
-	INT 21H
+	INT 21h
 
 	JMP JEND
 
@@ -80,41 +77,41 @@ DRIVER_OK:
 	CALL RTC_CONFIG
 
 	; CLEARS THE SCREEN
-	MOV AH,9	
+	MOV AH, 9	
 	MOV DX, OFFSET CLEAR_SCREEN
-	INT 21H
+	INT 21h
 
 
 KEYBOARD_LOOP:
 
 	; Printing the current mode
 	MOV DX, OFFSET MODESTRING
-	INT 21H
+	INT 21h
 
 	CMP COD_DEC, 0
 	JNE DEC_PRINT
  
 	MOV DX, OFFSET CODSTRING
-	INT 21H
+	INT 21h
 
 	JMP SCANF
 
 DEC_PRINT:
 
 	MOV DX, OFFSET DECSTRING
-	INT 21H
+	INT 21h
 
 SCANF: 
 
 	; PRINTS THE MESSAGE REQUEST
 	MOV DX, OFFSET STATEMENT		
-	INT 21H
+	INT 21h
 
 	; STORES THE MESSAGE IN MEMORY
-	MOV AH,0AH			
+	MOV AH, 0Ah		
 	MOV DX, OFFSET MESSAGE
 	MOV MESSAGE[0], 90		
-	INT 21H
+	INT 21h
 
 	; Check out if the MESSAGE'S lenght is not null
 	MOV BH, 0
@@ -126,16 +123,16 @@ SCANF:
 	; In order to print the message correctly, we have to write the $ right after the last character
 	MOV MESSAGE[BX+2], '$'
 
-	; First of all, we check out if the given string is one of our commands.s
+	; First of all, we check out if the given string is one of our commands
 
 	; Quit comparison
-	CMP MESSAGE[2], 'Q'
+	CMP MESSAGE[2], 'q'
 	JNE COD_CMP
-	CMP MESSAGE[3], 'U'
+	CMP MESSAGE[3], 'u'
 	JNE COD_CMP
-	CMP MESSAGE[4], 'I'
+	CMP MESSAGE[4], 'i'
 	JNE COD_CMP
-	CMP MESSAGE[5], 'T'
+	CMP MESSAGE[5], 't'
 	JNE COD_CMP
 
 	; In this case the QUIT command has been written. The program ends
@@ -144,11 +141,11 @@ SCANF:
 
 COD_CMP:
 
-	CMP MESSAGE[2], 'C'
+	CMP MESSAGE[2], 'c'
 	JNE DEC_CMP
-	CMP MESSAGE[3], 'O'
+	CMP MESSAGE[3], 'o'
 	JNE DEC_CMP
-	CMP MESSAGE[4], 'D'
+	CMP MESSAGE[4], 'd'
 	JNE DEC_CMP
 
 
@@ -157,19 +154,19 @@ COD_CMP:
 	MOV COD_DEC, 0
 
 	; Printing a line jump 
-	MOV AH,9	
+	MOV AH, 9	
 	MOV DX, OFFSET LINEJUMP
-	INT 21H
+	INT 21h
 
 	JMP KEYBOARD_LOOP
 
 DEC_CMP: 
 	
-	CMP MESSAGE[2], 'D'
+	CMP MESSAGE[2], 'd'
 	JNE STRING_MODE
-	CMP MESSAGE[3], 'E'
+	CMP MESSAGE[3], 'e'
 	JNE STRING_MODE
-	CMP MESSAGE[4], 'C'
+	CMP MESSAGE[4], 'c'
 	JNE STRING_MODE
 
 	; In this case the DEC command has been written. We change the mode-flag
@@ -177,9 +174,9 @@ DEC_CMP:
 	MOV COD_DEC, 1
 
 	; Printing a line jump 
-	SMOV AH,9	
+	MOV AH, 9	
 	MOV DX, OFFSET LINEJUMP
-	INT 21H
+	INT 21h
 
 	JMP KEYBOARD_LOOP
 
@@ -188,14 +185,14 @@ STRING_MODE:
 	; PRINTS THE MESSAGE WRITTEN BY THE USER
 	MOV AH,9	
 	MOV DX, OFFSET PRINTMESSAGE
-	INT 21H
+	INT 21h
 	
 	MOV DX, OFFSET MESSAGE[2]
-	INT 21H
+	INT 21h
 
 	; Printing a line jump 
 	MOV DX, OFFSET LINEJUMP
-	INT 21H
+	INT 21h
 
 	
 	CMP COD_DEC, 0
@@ -204,7 +201,7 @@ STRING_MODE:
 	; CASE 1: ENCRYPTION
 
 	MOV DX, OFFSET CODMESSAGE
-	INT 21H
+	INT 21h
 
 	; 12h => ENCRYPTION
 	MOV AH, 12h
@@ -216,7 +213,7 @@ STRING_MODE:
 DEC_MODE:
 
 	MOV DX, OFFSET DECMESSAGE
-	INT 21H
+	INT 21h
 
 	; 13h => DECRYPTION
 	MOV AH, 13h
@@ -241,12 +238,15 @@ INT_CALL:
 	; Printing a line jump 
 	MOV AH, 9h
 	MOV DX, OFFSET LINEJUMP
-	INT 21H
+	INT 21h
 
 
 	; Active wait. We wait until the RTC interruptions end up printing the encoded/decoded string
 
 WAITING:
+	MOV DX, OFFSET MESSAGE[2]
+	MOV BX, SEG MESSAGE
+	MOV DS, BX
 	
 	MOV AH, 07h
 	INT 55h
@@ -263,14 +263,17 @@ JEND:
 INICIO ENDP
 
 
-; This function writes on CL
+; This function writes on AH
 ; After the execution:
-; CL = 0 if there isnt any driver at 55h
-; CL = 1 if the installed driver is ours.
-; CL = 2 if there is a driver, but it is not ours.
+; AH = 0 if there isnt any driver at 55h
+; AH = 1 if the installed driver is ours.
+; AH = 2 if there is a driver, but it is not ours.
 CHECK_DRIVER PROC NEAR
 
-	PUSH DI SI AX
+	PUSH DI SI ES
+
+	MOV AX, 0
+	MOV ES, AX
 
 	; We have to check if there is a driver in 55h
 	; If so, we would like to know if it is our driver
@@ -290,7 +293,7 @@ DRIVER_EXISTS:
 
 	MOV AH, 08h
 	INT 55h
-	; If the interruption with AH = 08h changes CL from 0 to 1, then it should be our interruption.
+	; If the interruption with AH = 08h changes AH to 1, then it should be our interruption.
 	CMP AH, 1
 	JE END_CHECK
 
@@ -298,7 +301,7 @@ DRIVER_EXISTS:
 	MOV AH, 2
 
 END_CHECK:
-	POP AX SI DI
+	POP ES SI DI
 	RET
 
 CHECK_DRIVER ENDP
@@ -314,7 +317,7 @@ RTC_CONFIG PROC NEAR
 	MOV AL, 0Ah
 	; Set the frequency
 	OUT 70h, AL 		; Enable 0Ah register
-	MOV AL, 00101111b 	; DV=010b, RS=1110b (14 == 4 Hz)
+	MOV AL, 00101111b 	; DV=010b, RS=1111b (15 == 2 Hz)
 	OUT 71h, AL 		; Write 0Ah register
 	; Active interrupt
 	MOV AL, 0Bh

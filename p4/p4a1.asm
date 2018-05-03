@@ -21,25 +21,25 @@ CODE SEGMENT
 ; BEGINNING OF THE MAIN PROCEDURE
 INICIO: 
 	; Check input parameters
-	MOV CL, DS:[80h]   	; Load the size of the parameters in the command line
+	MOV AH, DS:[80h]   	; Load the size of the parameters in the command line
 	; No parameters
-	CMP CL, 0
+	CMP AH, 0
 	JNE NEXT
 	CALL STATUS
 	JMP FINAL
 
 NEXT:
 	; If there is a parameter, it must be 3 bytes long (space + / + I or space + / + U)
-	CMP CL, 3
+	CMP AH, 3
 	JNE ERROR
-	MOV CX, DS:[82h]
-	CMP CL, '/'
+	MOV AX, DS:[82h]
+	CMP AL, '/'
 	JNE ERROR
 	; /I as parameter
-	CMP CH, 'I'
+	CMP AH, 'I'
 	JE AUXINSJUMP
 	; /U as parameter
-	CMP CH, 'U'
+	CMP AH, 'U'
 	JNE ERROR
 	CALL UNINSTALLER
 	JMP FINAL
@@ -54,7 +54,7 @@ ERROR:
 	; Shows this message when there has been an error introducing the parameters
 	MOV AH, 09h
 	MOV DX, OFFSET ERRORSTRING
-	INT 21H
+	INT 21h
 	JMP FINAL
 
 	; Print variables for Installation/Uninstallation
@@ -74,59 +74,6 @@ ERROR:
 	MIN_VALUE DB 32 	; Minimum ASCII value we accept (space), in decimal
 	;PREV_55h DW ?, ? 	; Variable to store the routine which was previously installed in 55h of the interrumpt vector
 
-	; Variables for RTC
-	FLAG_PRINT DB 0		; 0 -> No print character by character. 1 -> Print character by character
-	COUNTER DB 2 		; Used to simulate 1 Hz frequency because we can only configure RTC's frequency to 2 Hz minimum
-	INDEX DW 0 			; Index to print the string character by character
-
-	
-	RTC_ROUTINE PROC FAR 	; RTC ROUTINE
-		PUSHF
-		PUSH BX AX SI DX
-
-		STI
-		; Read register C 
-		MOV AL, 0Ch
-		OUT 70h, AL
-		IN AL, 71h
-		CMP FLAG_PRINT, 1
-		JNE RTC_ROUTINE_FIN
-		; Decrease the counter which is used to simulate a 1 Hz frequency
-		DEC COUNTER
-		CMP COUNTER, 0
-		JNE RTC_ROUTINE_FIN
-		; Restart the counter
-		MOV COUNTER, 2
-		; Print character by character until finding '$'
-		MOV SI, INDEX
-		MOV BX, DX
-		MOV AH, 02h
-		MOV DL, DS:[BX][SI]
-		CMP DL, '$'
-		JE PRINT_END
-		INT 21h
-		; Increase the index
-		INC SI
-		MOV INDEX, SI
-		JMP RTC_ROUTINE_FIN
-
-	PRINT_END:
-		MOV SI, 0
-		MOV INDEX, SI
-		MOV FLAG_PRINT, 0
-
-	RTC_ROUTINE_FIN:
-		; Send EOI to the slave PIC
-		MOV AL, 20h
-		OUT 0A0h, AL
-		; Send EOI to the master PIC
-		OUT 20h, AL
-
-		POP DX SI AX BX
-		POPF
-		IRET
-	RTC_ROUTINE ENDP
-
 	CAESAR PROC FAR ; INTERRUPT SERVICE ROUTINE
 		PUSHF
 		; SAVE MODIFIED REGISTERS
@@ -135,7 +82,7 @@ ERROR:
 		; We know the string is pointed by DS:DX
 		MOV SI, 0 		; Initialize the index
 		MOV BX, DX
-
+		
 		; We have to check AH
 		CMP AH, 12h 	; Encrypt and print
 		JE ENCRYPT
@@ -143,19 +90,11 @@ ERROR:
 		JE DECRYPT
 		CMP AH, 08h     ; This is an extra feature that will be used to tell us if the interruption is installed or not
 		JE DRIVER_PRESENCE
-		CMP AH, 07h     ; This is an extra feature that will be used to tell us if RTC is printing or not
-		JE PRINT_MODE
 		JMP FIN
 
 	DRIVER_PRESENCE:
 
 		MOV AH, 1		; If the interruption is installed, AH will be modified and store a one.
-
-		JMP FIN 
-
-	PRINT_MODE:
-
-		MOV AH, FLAG_PRINT		; If RTC is printing character by character, AH will be modified and store the FLAG_PRINT (1 if we are printing, 0 if not).
 
 		JMP FIN 
 
@@ -200,9 +139,8 @@ ERROR:
 	PRINT:
 		
 		MOV AH, 09h
-		INT 21h 			; Print the string after processing it. Offset is already in DX
-		MOV FLAG_PRINT, 1 	; Tell the RTC that it must print character by character the string
-
+		INT 21h 		; Print the string after processing it. Offset is already in DX
+		
 		; RESTORE MODIFIED REGISTERS
 	FIN:
 		POP BX SI
@@ -273,14 +211,8 @@ ERROR:
 	INSTALL:
 
 		CLI
-
 		MOV ES:[ 55h*4 ], OFFSET CAESAR
 		MOV ES:[ 55h*4+2 ], CS
-
-		; Install RTC 
-		MOV ES:[ 70h*4 ], OFFSET RTC_ROUTINE
-		MOV ES:[ 70h*4+2 ], CS
-
 		STI
 		MOV DX, OFFSET INSTALLER
 		INT 27H ; TERMINATE AND STAY RESIDENT
@@ -315,7 +247,7 @@ ERROR:
 		MOV ES, BX
 		INT 21h 						; RELEASE SEGMENT OF ENVIRONMENT VARIABLES OF CAESAR
 		
-		; SET VECTOR OF INTERRUPT 55h AND 70h TO ZEROS 
+		; SET VECTOR OF INTERRUPT 55H TO ZEROS 
 
 		;;;;;;;;;;;(OR THE DRIVER PREVIOUSLY INSTALLED)
 
@@ -323,14 +255,6 @@ ERROR:
 		MOV CX, 0
 		MOV DS:[ 55h*4 ], CX   			; CX = 0, DS = 0
 		MOV DS:[ 55h*4+2 ], CX
-		; RTC
-		MOV DS:[ 70h*4 ], CX
-		MOV DS:[ 70h*4+2 ], CX
-
-		; MOV CX, PREV_55h
-		; MOV DS:[ 70h*4 ], CX
-		; MOV CX, PREV_55h+2
-		; MOV DS:[ 70h*4+2 ], CX
 		; MOV CX, PREV_55h
 		; MOV DS:[ 55h*4 ], CX
 		; MOV CX, PREV_55h+2

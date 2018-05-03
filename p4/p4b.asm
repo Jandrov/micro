@@ -38,14 +38,12 @@ INICIO PROC
 	; INITIALIZE THE SEGMENT REGISTERS
 	MOV AX, DATOS
 	MOV DS, AX
-	MOV AX, 0
-	MOV ES, AX
 
 
 	; We have to check if our driver is correcly installed
-	MOV CL, 0
+	MOV AH, 0
 	CALL CHECK_DRIVER
-	CMP CL, 1
+	CMP AH, 1
 	JE DRIVER_OK
 
 
@@ -55,26 +53,26 @@ ERROR:
 	; Printing an ERRORCODE
 	MOV DX, OFFSET ERRORCODE
 	MOV AH, 9
-	INT 21H
+	INT 21h
 
 	JMP JEND
 
 DRIVER_OK:
 
 	; CLEARS THE SCREEN
-	MOV AH,9	
+	MOV AH, 9	
 	MOV DX, OFFSET CLEAR_SCREEN
-	INT 21H
+	INT 21h
 
 	; PRINTS THE MESSAGE REQUEST
 	MOV DX, OFFSET STATEMENT		
-	INT 21H
+	INT 21h
 
 	; STORES THE MESSAGE IN MEMORY
-	MOV AH,0AH			
+	MOV AH, 0Ah			
 	MOV DX, OFFSET MESSAGE
 	MOV MESSAGE[0], 90		
-	INT 21H
+	INT 21h
 
 	; Check out if the MESSAGE'S lenght is not null
 	MOV BH, 0
@@ -87,24 +85,24 @@ DRIVER_OK:
 
 
 	; PRINTS THE MESSAGE WRITTEN BY THE USER
-	MOV AH,9	
+	MOV AH, 9	
 	MOV DX, OFFSET PRINT1
-	INT 21H
+	INT 21h
 	
 	MOV DX, OFFSET MESSAGE[2]
-	INT 21H
+	INT 21h
 
 	; Printing a line jump 
 	MOV DX, OFFSET LINEJUMP
-	INT 21H
+	INT 21h
 
 
 	; CASE 1: ENCRYPTION
 	MOV DX, OFFSET PRINT2
-	INT 21H
+	INT 21h
 
 	; We push DS in order to keep it: We might need it later
-	push DS
+	PUSH DS
 
 	; We use message[2] because the first two bytes of the read message are the maximum size and the real size.
 	; We dont want to codify them
@@ -118,20 +116,20 @@ DRIVER_OK:
 	INT 55h
 
 	; Restoring DS
-	pop DS
+	POP DS
 
 	; Printing a line jump 
 	MOV AH, 9h
 	MOV DX, OFFSET LINEJUMP
-	INT 21H
+	INT 21h
 
 
 	; CASE 2: DECRYPTION
 	MOV DX, OFFSET PRINT3
-	INT 21H
+	INT 21h
 
 	; We push DS in order to keep it: We might need it later
-	push DS
+	PUSH DS
 	
 	MOV DX, OFFSET MESSAGE[2]
 	MOV AH, 13h
@@ -150,14 +148,17 @@ JEND:
 INICIO ENDP
 
 
-; This function writes on CL
+; This function writes on AH
 ; After the execution:
-; CL = 0 if there isnt any driver at 55h
-; CL = 1 if the installed driver is ours.
-; CL = 2 if there is a driver, but it is not ours.
+; AH = 0 if there isnt any driver at 55h
+; AH = 1 if the installed driver is ours.
+; AH = 2 if there is a driver, but it is not ours.
 CHECK_DRIVER PROC NEAR
 
-	PUSH DI SI AX
+	PUSH DI SI ES
+
+	MOV AX, 0
+	MOV ES, AX
 
 	; We have to check if there is a driver in 55h
 	; If so, we would like to know if it is our driver
@@ -170,23 +171,22 @@ CHECK_DRIVER PROC NEAR
 	JNE DRIVER_EXISTS
 		
 	; If we have reached this point it means there is no driver installed at all.
-	MOV CL, 0		
+	MOV AH, 0		
 	JMP END_CHECK
 
 DRIVER_EXISTS:
 
-	MOV CL, 0
 	MOV AH, 08h
 	INT 55h
-	; If the interruption with AH = 08h changes CL from 0 to 1, then it should be our interruption.
-	CMP CL, 1
+	; If the interruption with AH = 08h changes AH to 1, then it should be our interruption.
+	CMP AH, 1
 	JE END_CHECK
 
 	; The other possible case is: there is a driver, but it isnt the one we want.
-	MOV CL, 2
+	MOV AH, 2
 
 END_CHECK:
-	POP AX SI DI
+	POP ES SI DI
 	RET
 
 CHECK_DRIVER ENDP
